@@ -1,7 +1,6 @@
 import torch
 from transformers import LogitsProcessor
-from transformers.generation.logits_process import _calc_banned_ngram_tokens
-from typing import List, Set
+from typing import List
 
 
 class NoRepeatNGramLogitsProcessor(LogitsProcessor):
