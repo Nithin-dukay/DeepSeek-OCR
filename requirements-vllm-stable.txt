@@ -1,0 +1,30 @@
+# DeepSeek-OCR Requirements - Stable vLLM Version
+# This configuration uses the stable vLLM 0.8.5 to avoid compatibility issues
+
+# Core dependencies
+transformers==4.46.3
+tokenizers==0.20.3
+PyMuPDF
+img2pdf
+einops
+easydict
+addict 
+Pillow
+numpy
+
+# vLLM stable version (recommended)
+# Note: Install vLLM separately using the wheel file:
+# Download from: https://github.com/vllm-project/vllm/releases/tag/v0.8.5
+# pip install vllm-0.8.5+cu118-cp38-abi3-manylinux1_x86_64.whl
+
+# PyTorch (install separately with CUDA support)
+# torch==2.6.0
+# torchvision==0.21.0
+# torchaudio==2.6.0
+
+# Flash Attention (install separately)
+# flash-attn==2.7.3
+
+# Additional utilities
+packaging>=21.0
+tqdm
