@@ -57,6 +57,8 @@
 
 ## Contents
 - [Install](#install)
+  - [Quick Install](#quick-install)
+  - [Package Installation](#package-installation)
 - [vLLM Inference](#vllm-inference)
 - [Transformers Inference](#transformers-inference)
   
@@ -66,9 +68,12 @@
 
 ## Install
 >Our environment is cuda11.8+torch2.6.0.
+
+### Quick Install
 1. Clone this repository and navigate to the DeepSeek-OCR folder
 ```bash
 git clone https://github.com/deepseek-ai/DeepSeek-OCR.git
+cd DeepSeek-OCR
 ```
 2. Conda
 ```Shell
@@ -85,6 +90,22 @@ pip install -r requirements.txt
 pip install flash-attn==2.7.3 --no-build-isolation
 ```
 **Note:** if you want vLLM and transformers codes to run in the same environment, you don't need to worry about this installation error like: vllm 0.8.5+cu118 requires transformers>=4.51.1
+
+### Package Installation
+DeepSeek-OCR can now be installed as a Python package:
+
+```bash
+# Install from source (recommended)
+pip install -e .
+
+# Install with vLLM support
+pip install -e ".[vllm]"
+
+# Install for development
+pip install -e ".[dev]"
+```
+
+For detailed installation instructions, see [INSTALL.md](INSTALL.md).
 
 ## vLLM-Inference
 - VLLM:

@@ -1,0 +1,31 @@
+# Include documentation files
+include README.md
+include LICENSE
+include requirements.txt
+include DeepSeek_OCR_paper.pdf
+
+# Include assets
+recursive-include assets *.svg *.png *.jpg *.jpeg
+
+# Include configuration files
+recursive-include DeepSeek-OCR-master *.py
+recursive-include DeepSeek-OCR-master *.json
+recursive-include DeepSeek-OCR-master *.yaml
+recursive-include DeepSeek-OCR-master *.yml
+
+# Exclude unnecessary files
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude *$py.class
+global-exclude *.so
+global-exclude .DS_Store
+global-exclude *.swp
+global-exclude *.swo
+global-exclude *~
+global-exclude .git*
+global-exclude .vscode
+global-exclude .idea
+
+# Exclude test and development files
+prune tests
+prune docs/_build
