@@ -1,5 +1,23 @@
-transformers==4.46.3
-tokenizers==0.20.3
+# Core dependencies - INSTALL IN THIS ORDER
+# 1. Install transformers first (required by vLLM)
+transformers>=4.51.1
+tokenizers>=0.20.3
+
+# 2. Install PyTorch (choose appropriate CUDA version)
+# torch==2.6.0
+# torchvision==0.21.0
+# torchaudio==2.6.0
+# Install with: pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu118
+
+# 3. Install vLLM (use nightly build for DeepSeek-OCR support)
+# vllm>=0.8.5
+# Install with: pip install --pre vllm --extra-index-url https://wheels.vllm.ai/nightly
+
+# 4. Optional: Flash Attention for better performance
+# flash-attn==2.7.3
+# Install with: pip install flash-attn==2.7.3 --no-build-isolation
+
+# Other dependencies
 PyMuPDF
 img2pdf
 einops

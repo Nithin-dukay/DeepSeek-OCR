@@ -59,32 +59,68 @@
 - [Install](#install)
 - [vLLM Inference](#vllm-inference)
 - [Transformers Inference](#transformers-inference)
+- [Troubleshooting](#troubleshooting)
   
 
 
 
 
 ## Install
+
+> ⚠️ **IMPORTANT:** Installation order matters! To avoid `ImportError: cannot import name 'GenerationMixin'`, you **MUST** install transformers >= 4.51.1 **BEFORE** installing vLLM. See [INSTALLATION.md](INSTALLATION.md) for detailed instructions.
+
+### Quick Install (Recommended)
+
+```bash
+# Clone repository
+git clone https://github.com/deepseek-ai/DeepSeek-OCR.git
+cd DeepSeek-OCR
+
+# Run automated setup script
+bash setup.sh
+```
+
+### Manual Install
+
 >Our environment is cuda11.8+torch2.6.0.
+
 1. Clone this repository and navigate to the DeepSeek-OCR folder
 ```bash
 git clone https://github.com/deepseek-ai/DeepSeek-OCR.git
+cd DeepSeek-OCR
 ```
-2. Conda
+
+2. Create Conda environment
 ```Shell
-conda create -n deepseek-ocr python=3.12.9 -y
+conda create -n deepseek-ocr python=3.11 -y
 conda activate deepseek-ocr
 ```
-3. Packages
 
-- download the vllm-0.8.5 [whl](https://github.com/vllm-project/vllm/releases/tag/v0.8.5) 
+3. Install packages **IN THIS ORDER**:
+
 ```Shell
+# Step 1: Install transformers FIRST (critical!)
+pip install transformers>=4.51.1
+
+# Step 2: Install PyTorch
 pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu118
-pip install vllm-0.8.5+cu118-cp38-abi3-manylinux1_x86_64.whl
-pip install -r requirements.txt
+
+# Step 3: Install vLLM (choose one option)
+# Option A: vLLM nightly (recommended - includes DeepSeek-OCR support)
+pip install --pre vllm --extra-index-url https://wheels.vllm.ai/nightly
+
+# Option B: vLLM 0.8.5 stable (download wheel from link below)
+# Download from: https://github.com/vllm-project/vllm/releases/tag/v0.8.5
+# pip install vllm-0.8.5+cu118-cp38-abi3-manylinux1_x86_64.whl
+
+# Step 4: Install other dependencies
+pip install PyMuPDF img2pdf einops easydict addict Pillow numpy
+
+# Step 5: Install flash-attn (optional but recommended)
 pip install flash-attn==2.7.3 --no-build-isolation
 ```
-**Note:** if you want vLLM and transformers codes to run in the same environment, you don't need to worry about this installation error like: vllm 0.8.5+cu118 requires transformers>=4.51.1
+
+**Note:** For detailed troubleshooting and environment-specific instructions (Kaggle, Colab, etc.), see [INSTALLATION.md](INSTALLATION.md)
 
 ## vLLM-Inference
 - VLLM:
@@ -220,6 +256,45 @@ The current open-source model supports the following modes:
 </tr>
 </table>
 
+
+## Troubleshooting
+
+### Common Issues
+
+#### ImportError: cannot import name 'GenerationMixin'
+
+**Error:**
+```
+ImportError: cannot import name 'GenerationMixin' from 'transformers.generation'
+```
+
+**Solution:**
+This occurs when transformers version is too old. Install transformers >= 4.51.1 **before** vLLM:
+
+```bash
+pip uninstall transformers vllm -y
+pip install transformers>=4.51.1
+pip install --pre vllm --extra-index-url https://wheels.vllm.ai/nightly
+```
+
+#### vLLM requires transformers >= 4.51.1
+
+**Solution:**
+Follow the correct installation order in [INSTALLATION.md](INSTALLATION.md)
+
+#### CUDA Out of Memory
+
+**Solution:**
+Reduce memory usage in your code:
+```python
+llm = LLM(
+    model="deepseek-ai/DeepSeek-OCR",
+    max_model_len=4096,  # Reduce from 8192
+    gpu_memory_utilization=0.75,  # Reduce from 0.9
+)
+```
+
+For more troubleshooting, see [INSTALLATION.md](INSTALLATION.md#troubleshooting)
 
 ## Acknowledgement
 
