@@ -55,10 +55,16 @@
 - [2025/10/23]🚀🚀🚀 DeepSeek-OCR is now officially supported in upstream [vLLM](https://docs.vllm.ai/projects/recipes/en/latest/DeepSeek/DeepSeek-OCR.html#installing-vllm). Thanks to the [vLLM](https://github.com/vllm-project/vllm) team for their help.
 - [2025/10/20]🚀🚀🚀 We release DeepSeek-OCR, a model to investigate the role of vision encoders from an LLM-centric viewpoint.
 
+## ⚠️ Important: Hallucination Fix (Issue #191)
+If you're experiencing hallucinations with the Transformers inference (especially with handwritten or challenging documents), please see **[HALLUCINATION_FIX.md](HALLUCINATION_FIX.md)** for the solution. We provide an improved inference script with anti-hallucination mechanisms.
+
+**Quick fix**: Use `DeepSeek-OCR-master/DeepSeek-OCR-hf/run_dpsk_ocr_improved.py` instead of the original script, or use the vLLM implementation which has these features built-in.
+
 ## Contents
 - [Install](#install)
 - [vLLM Inference](#vllm-inference)
 - [Transformers Inference](#transformers-inference)
+- [Hallucination Fix](#important-hallucination-fix-issue-191)
   
 
 
