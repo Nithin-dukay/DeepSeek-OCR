@@ -1,0 +1,59 @@
+# DeepSeek-OCR Requirements for CUDA 12.8 / RTX 5090
+# This file lists the dependencies for CUDA 12.8 setup
+# 
+# IMPORTANT: Do NOT install these with a simple "pip install -r requirements_cuda128.txt"
+# Follow the installation guide at docs/INSTALL_CUDA_12.8.md for the correct order
+# Or use the automated script: bash scripts/install_cuda128.sh
+
+# Core PyTorch and Acceleration Libraries (Install in specific order!)
+# xformers==0.0.33.dev20251104+cu128  # Install first with --extra-index-url
+# flash-attn==2.8.3  # Install from pre-built wheel
+# vllm==0.8.5+cu128  # Install from pre-built wheel with --no-build-isolation --no-deps
+# torchvision  # Install from nightly, then re-install xformers!
+
+# Core Dependencies
+pydantic>=2.0.0
+transformers>=4.46.3
+tokenizers>=0.20.3
+cachetools
+cloudpickle
+psutil
+zmq
+msgspec
+blake3
+
+# Additional vLLM Dependencies
+hf_transfer
+prometheus_client
+ray>=2.9.0
+fastapi>=0.100.0
+uvicorn[standard]
+sentencepiece
+protobuf
+grpcio
+aiohttp
+openai
+tiktoken
+lm-format-enforcer
+outlines>=0.0.34
+typing-extensions>=4.8.0
+filelock
+requests
+
+# Image Processing
+Pillow>=9.0.0
+numpy>=1.24.0
+einops
+img2pdf
+
+# PDF Processing
+PyMuPDF
+
+# Utilities
+easydict
+addict
+
+# Development Tools (Optional)
+# pytest
+# black
+# ruff

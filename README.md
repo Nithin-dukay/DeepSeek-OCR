@@ -57,6 +57,8 @@
 
 ## Contents
 - [Install](#install)
+  - [CUDA 11.8 Installation](#cuda-118-installation-default)
+  - [CUDA 12.8 / RTX 5090 Installation](#cuda-128--rtx-5090-installation)
 - [vLLM Inference](#vllm-inference)
 - [Transformers Inference](#transformers-inference)
   
@@ -65,6 +67,30 @@
 
 
 ## Install
+
+### CUDA 12.8 / RTX 5090 Installation
+
+> **🚀 NEW:** For NVIDIA RTX 5090 and CUDA 12.8 users, we now provide a dedicated installation guide!
+
+If you're using **CUDA 12.8** or **RTX 5090**, please follow our specialized installation guide:
+
+📖 **[CUDA 12.8 Installation Guide](docs/INSTALL_CUDA_12.8.md)**
+
+**Quick Start (Automated):**
+```bash
+bash scripts/install_cuda128.sh
+```
+
+**Verify Installation:**
+```bash
+python scripts/verify_installation.py
+```
+
+This installation method addresses the complex dependency chain required for CUDA 12.8 and has been verified to work on RTX 5090 GPUs. See [Issue #240](https://github.com/deepseek-ai/DeepSeek-OCR/issues/240) for community discussion.
+
+---
+
+### CUDA 11.8 Installation (Default)
 >Our environment is cuda11.8+torch2.6.0.
 1. Clone this repository and navigate to the DeepSeek-OCR folder
 ```bash
@@ -85,6 +111,19 @@ pip install -r requirements.txt
 pip install flash-attn==2.7.3 --no-build-isolation
 ```
 **Note:** if you want vLLM and transformers codes to run in the same environment, you don't need to worry about this installation error like: vllm 0.8.5+cu118 requires transformers>=4.51.1
+
+### Troubleshooting
+
+If you encounter installation or runtime issues, please check our comprehensive troubleshooting guide:
+
+📖 **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)**
+
+Common issues covered:
+- Module import errors
+- CUDA/GPU detection problems
+- Memory issues
+- Performance optimization
+- And more...
 
 ## vLLM-Inference
 - VLLM:
