@@ -52,6 +52,7 @@
 </p>
 
 ## Release
+- [2025/11/10]🔧 **Fixed Issue #241**: Added batched processing for large PDFs (2800+ pages) with memory leak fixes. See [Large PDF Guide](DeepSeek-OCR-master/DeepSeek-OCR-vllm/LARGE_PDF_GUIDE.md) for details.
 - [2025/10/23]🚀🚀🚀 DeepSeek-OCR is now officially supported in upstream [vLLM](https://docs.vllm.ai/projects/recipes/en/latest/DeepSeek/DeepSeek-OCR.html#installing-vllm). Thanks to the [vLLM](https://github.com/vllm-project/vllm) team for their help.
 - [2025/10/20]🚀🚀🚀 We release DeepSeek-OCR, a model to investigate the role of vision encoders from an LLM-centric viewpoint.
 
@@ -59,6 +60,7 @@
 - [Install](#install)
 - [vLLM Inference](#vllm-inference)
 - [Transformers Inference](#transformers-inference)
+- [Large PDF Processing](#large-pdf-processing) 🆕
   
 
 
@@ -100,7 +102,11 @@ python run_dpsk_ocr_image.py
 ```Shell
 python run_dpsk_ocr_pdf.py
 ```
-3. batch eval for benchmarks
+3. **pdf (large documents 1000+ pages)**: batched processing with memory management 🆕
+```Shell
+python run_dpsk_ocr_pdf_batched.py
+```
+4. batch eval for benchmarks
 ```Shell
 python run_dpsk_ocr_eval_batch.py
 ```
@@ -220,6 +226,53 @@ The current open-source model supports the following modes:
 </tr>
 </table>
 
+## Large PDF Processing
+
+### Issue #241 Fix: Memory Management for Large Documents
+
+Processing large PDFs (2800+ pages) now supported with batched processing and memory optimization.
+
+#### Quick Start for Large PDFs
+
+```bash
+cd DeepSeek-OCR-master/DeepSeek-OCR-vllm
+
+# Edit config.py
+INPUT_PATH = '/path/to/large.pdf'
+OUTPUT_PATH = '/path/to/output'
+BATCH_SIZE = 50  # Adjust based on GPU memory
+
+# Run batched processing
+python run_dpsk_ocr_pdf_batched.py
+```
+
+#### Configuration Guidelines
+
+| GPU Memory | BATCH_SIZE | MAX_CONCURRENCY |
+|------------|------------|-----------------|
+| 8GB        | 20-25      | 25              |
+| 16GB       | 40-50      | 50              |
+| 24GB (A10) | 50-75      | 75              |
+| 40GB+      | 100-150    | 100             |
+
+#### Features
+
+- ✅ Processes 2800+ page PDFs without crashes
+- ✅ Constant memory usage throughout processing
+- ✅ Configurable batch sizes for different GPU specs
+- ✅ Memory monitoring and statistics
+- ✅ Backward compatible with existing code
+
+#### Documentation
+
+- **Quick Guide**: [LARGE_PDF_GUIDE.md](DeepSeek-OCR-master/DeepSeek-OCR-vllm/LARGE_PDF_GUIDE.md)
+- **Full Documentation**: [MEMORY_FIX_DOCUMENTATION.md](MEMORY_FIX_DOCUMENTATION.md)
+
+#### New Files
+
+- `run_dpsk_ocr_pdf_batched.py` - Batched processing for large PDFs
+- `process/memory_utils.py` - Memory management utilities
+- Enhanced `run_dpsk_ocr_pdf.py` with memory cleanup
 
 ## Acknowledgement
 

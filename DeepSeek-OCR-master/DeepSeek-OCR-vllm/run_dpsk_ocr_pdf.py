@@ -6,7 +6,7 @@ import re
 from tqdm import tqdm
 import torch
 from concurrent.futures import ThreadPoolExecutor
- 
+import gc
 
 if torch.version.cuda == '11.8':
     os.environ["TRITON_PTXAS_PATH"] = "/usr/local/cuda-11.8/bin/ptxas"
@@ -14,7 +14,9 @@ os.environ['VLLM_USE_V1'] = '0'
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
 
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, SKIP_REPEAT, MAX_CONCURRENCY, NUM_WORKERS, CROP_MODE
+from config import (MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, SKIP_REPEAT, 
+                    MAX_CONCURRENCY, NUM_WORKERS, CROP_MODE, ENABLE_MEMORY_CLEANUP, 
+                    MEMORY_CLEANUP_INTERVAL)
 
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
@@ -25,6 +27,7 @@ from vllm.model_executor.models.registry import ModelRegistry
 from vllm import LLM, SamplingParams
 from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
 from process.image_process import DeepseekOCRProcessor
+from process.memory_utils import cleanup_memory, print_memory_stats
 
 ModelRegistry.register_model("DeepseekOCRForCausalLM", DeepseekOCRForCausalLM)
 
@@ -63,7 +66,7 @@ class Colors:
 
 def pdf_to_images_high_quality(pdf_path, dpi=144, image_format="PNG"):
     """
-    pdf2images
+    pdf2images with memory cleanup
     """
     images = []
     
@@ -90,6 +93,13 @@ def pdf_to_images_high_quality(pdf_path, dpi=144, image_format="PNG"):
                 img = background
         
         images.append(img)
+        
+        # Clean up pixmap to free memory
+        del pixmap
+        
+        # Periodic memory cleanup for large PDFs
+        if ENABLE_MEMORY_CLEANUP and (page_num + 1) % MEMORY_CLEANUP_INTERVAL == 0:
+            gc.collect()
     
     pdf_document.close()
     return images
@@ -236,10 +246,19 @@ if __name__ == "__main__":
     os.makedirs(f'{OUTPUT_PATH}/images', exist_ok=True)
     
     print(f'{Colors.RED}PDF loading .....{Colors.RESET}')
-
+    
+    # Print initial memory stats
+    if ENABLE_MEMORY_CLEANUP:
+        print_memory_stats("Initial memory: ")
 
     images = pdf_to_images_high_quality(INPUT_PATH)
-
+    
+    print(f'{Colors.GREEN}Loaded {len(images)} pages{Colors.RESET}')
+    
+    # Memory cleanup after loading images
+    if ENABLE_MEMORY_CLEANUP:
+        cleanup_memory(verbose=False)
+        print_memory_stats("After loading images: ")
 
     prompt = PROMPT
 
@@ -252,6 +271,10 @@ if __name__ == "__main__":
             desc="Pre-processed images"
         ))
 
+    # Memory cleanup after preprocessing
+    if ENABLE_MEMORY_CLEANUP:
+        cleanup_memory(verbose=False)
+        print_memory_stats("After preprocessing: ")
 
     # for image in tqdm(images):
 
@@ -264,11 +287,17 @@ if __name__ == "__main__":
     #     ]
     #     batch_inputs.extend(cache_list)
 
-
+    print(f'{Colors.YELLOW}Running OCR inference...{Colors.RESET}')
     outputs_list = llm.generate(
         batch_inputs,
         sampling_params=sampling_params
     )
+    
+    # Memory cleanup after inference
+    del batch_inputs
+    if ENABLE_MEMORY_CLEANUP:
+        cleanup_memory(verbose=False)
+        print_memory_stats("After inference: ")
 
 
     output_path = OUTPUT_PATH
@@ -327,4 +356,13 @@ if __name__ == "__main__":
 
 
     pil_to_pdf_img2pdf(draw_images, pdf_out_path)
+    
+    # Final memory cleanup
+    del images
+    del outputs_list
+    del draw_images
+    if ENABLE_MEMORY_CLEANUP:
+        cleanup_memory(verbose=True)
+    
+    print(f'\n{Colors.GREEN}Processing completed successfully!{Colors.RESET}')
 
