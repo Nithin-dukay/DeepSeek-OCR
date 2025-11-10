@@ -55,36 +55,122 @@
 - [2025/10/23]🚀🚀🚀 DeepSeek-OCR is now officially supported in upstream [vLLM](https://docs.vllm.ai/projects/recipes/en/latest/DeepSeek/DeepSeek-OCR.html#installing-vllm). Thanks to the [vLLM](https://github.com/vllm-project/vllm) team for their help.
 - [2025/10/20]🚀🚀🚀 We release DeepSeek-OCR, a model to investigate the role of vision encoders from an LLM-centric viewpoint.
 
+## ⚠️ IMPORTANT: Installation Order Matters!
+
+**Before installing, please read this to avoid common errors:**
+
+🚨 **Common Error**: `ImportError: cannot import name 'GenerationMixin' from 'transformers.generation'`
+
+**Cause**: Installing packages in the wrong order or using incompatible versions.
+
+**Solution**: Follow the correct installation order in [INSTALLATION.md](INSTALLATION.md)
+
+### Quick Installation Check
+
+Before you start, run this to validate your environment:
+```bash
+python check_environment.py
+```
+
+### Installation Methods
+
+Choose ONE of these methods based on your needs:
+
+1. **[Recommended] vLLM 0.8.5 (Local)** - Most stable, tested configuration
+   ```bash
+   bash setup_vllm_local.sh
+   ```
+
+2. **vLLM Nightly (Upstream)** - Latest features, officially supported by vLLM
+   ```bash
+   bash setup_vllm_upstream.sh
+   ```
+
+3. **Transformers Only** - Simpler but slower inference
+
+📖 **For detailed instructions, troubleshooting, and platform-specific guides (Kaggle/Colab), see [INSTALLATION.md](INSTALLATION.md)**
+
 ## Contents
 - [Install](#install)
 - [vLLM Inference](#vllm-inference)
 - [Transformers Inference](#transformers-inference)
+- [Troubleshooting](#troubleshooting)
   
 
 
 
 
 ## Install
->Our environment is cuda11.8+torch2.6.0.
+
+### ⚠️ Critical Installation Notes
+
+**IMPORTANT**: Installation order matters! Installing packages in the wrong order will cause `ImportError: cannot import name 'GenerationMixin'`.
+
+**For detailed installation instructions, see [INSTALLATION.md](INSTALLATION.md)**
+
+### Quick Install (Automated)
+
+**Option 1: vLLM 0.8.5 (Recommended for stability)**
+```bash
+git clone https://github.com/deepseek-ai/DeepSeek-OCR.git
+cd DeepSeek-OCR
+bash setup_vllm_local.sh
+```
+
+**Option 2: vLLM Nightly (Latest features)**
+```bash
+git clone https://github.com/deepseek-ai/DeepSeek-OCR.git
+cd DeepSeek-OCR
+bash setup_vllm_upstream.sh
+```
+
+### Manual Install (vLLM 0.8.5)
+
+>Our tested environment is cuda11.8+torch2.6.0+transformers4.46.3
+
 1. Clone this repository and navigate to the DeepSeek-OCR folder
 ```bash
 git clone https://github.com/deepseek-ai/DeepSeek-OCR.git
+cd DeepSeek-OCR
 ```
-2. Conda
+
+2. Create conda environment
 ```Shell
 conda create -n deepseek-ocr python=3.12.9 -y
 conda activate deepseek-ocr
 ```
-3. Packages
 
-- download the vllm-0.8.5 [whl](https://github.com/vllm-project/vllm/releases/tag/v0.8.5) 
+3. **STEP 1: Install PyTorch FIRST** (Critical!)
 ```Shell
 pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu118
+```
+
+4. **STEP 2: Install vLLM** - Download the vllm-0.8.5 [whl](https://github.com/vllm-project/vllm/releases/tag/v0.8.5) 
+```Shell
+wget https://github.com/vllm-project/vllm/releases/download/v0.8.5/vllm-0.8.5+cu118-cp38-abi3-manylinux1_x86_64.whl
 pip install vllm-0.8.5+cu118-cp38-abi3-manylinux1_x86_64.whl
+```
+
+5. **STEP 3: Install requirements** (includes transformers==4.46.3)
+```Shell
 pip install -r requirements.txt
+```
+
+6. **STEP 4: Install flash-attn** (Optional but recommended)
+```Shell
 pip install flash-attn==2.7.3 --no-build-isolation
 ```
-**Note:** if you want vLLM and transformers codes to run in the same environment, you don't need to worry about this installation error like: vllm 0.8.5+cu118 requires transformers>=4.51.1
+
+**Note:** You may see a warning like `vllm 0.8.5+cu118 requires transformers>=4.51.1`. This can be safely ignored - the project is designed to work with transformers 4.46.3 and vLLM 0.8.5 together.
+
+### Verify Installation
+
+After installation, verify your environment:
+```bash
+python check_environment.py
+```
+
+This will check for version compatibility and common issues.
 
 ## vLLM-Inference
 - VLLM:
@@ -220,6 +306,76 @@ The current open-source model supports the following modes:
 </tr>
 </table>
 
+
+## Troubleshooting
+
+### Common Issues
+
+#### 1. ImportError: cannot import name 'GenerationMixin'
+
+**Error Message:**
+```
+ImportError: cannot import name 'GenerationMixin' from 'transformers.generation'
+```
+
+**Cause:** Version mismatch between transformers and vLLM, or incorrect installation order.
+
+**Solutions:**
+
+For vLLM 0.8.5:
+```bash
+pip uninstall transformers -y
+pip install transformers==4.46.3
+```
+
+For vLLM nightly:
+```bash
+pip install --pre vllm --extra-index-url https://wheels.vllm.ai/nightly --force-reinstall
+```
+
+#### 2. CUDA Out of Memory
+
+**Solutions:**
+- Reduce `max_model_len` in your code (try 4096 instead of 8192)
+- Use smaller image sizes (640x640 instead of 1024x1024)
+- Reduce `MAX_CROPS` in `config.py` (try 4 or 6 instead of 9)
+
+#### 3. Flash Attention Installation Fails
+
+**Solution:** Flash attention is optional. Skip it and the model will use standard attention:
+```bash
+# Continue without flash-attn - the model will work fine
+```
+
+#### 4. Model Download is Slow
+
+**Solutions:**
+- Use HuggingFace mirror: `export HF_ENDPOINT=https://hf-mirror.com`
+- Be patient - first download takes 5-10 minutes depending on network speed
+
+### Platform-Specific Issues
+
+#### Kaggle/Colab
+
+For Kaggle and Google Colab users, see:
+- [kaggle_notebook_example.py](kaggle_notebook_example.py) - Complete working example
+- [INSTALLATION.md](INSTALLATION.md) - Platform-specific instructions
+
+**Key points for Kaggle/Colab:**
+1. Install PyTorch BEFORE vLLM
+2. Do NOT install transformers separately when using vLLM nightly
+3. Use the correct installation order (see kaggle_notebook_example.py)
+
+### Getting Help
+
+1. **Check your environment**: Run `python check_environment.py`
+2. **Read the docs**: See [INSTALLATION.md](INSTALLATION.md) for detailed instructions
+3. **Search issues**: Check [GitHub Issues](https://github.com/deepseek-ai/DeepSeek-OCR/issues)
+4. **Create an issue**: If your problem isn't covered, create a new issue with:
+   - Output of `check_environment.py`
+   - Full error traceback
+   - Your installation method
+   - Platform (Kaggle/Colab/Local)
 
 ## Acknowledgement
 

@@ -1,9 +1,37 @@
+# Core Dependencies for DeepSeek-OCR
+# CRITICAL: Do NOT change transformers version when using vLLM 0.8.5
+# For vLLM nightly, let vLLM manage transformers version (do not install from this file)
+
+# Transformers - MUST be 4.46.3 for vLLM 0.8.5 compatibility
+# WARNING: Using transformers 4.51.1 will cause ImportError: cannot import name 'GenerationMixin'
 transformers==4.46.3
+
+# Tokenizers - Compatible with transformers 4.46.3
 tokenizers==0.20.3
-PyMuPDF
-img2pdf
-einops
-easydict
-addict 
-Pillow
-numpy
+
+# PDF Processing
+PyMuPDF>=1.23.0  # For PDF file handling
+img2pdf>=0.4.4   # For image to PDF conversion
+
+# Neural Network Utilities
+einops>=0.7.0    # For tensor operations
+
+# Configuration Management
+easydict>=1.10   # For easy dictionary access
+addict>=2.4.0    # For nested dictionary handling
+
+# Image Processing
+Pillow>=10.0.0   # For image loading and manipulation
+
+# Numerical Computing
+numpy>=1.24.0,<2.0.0  # Core numerical operations
+
+# Optional Dependencies (install separately if needed)
+# flash-attn==2.7.3  # Recommended for faster attention, install with: pip install flash-attn==2.7.3 --no-build-isolation
+# torch==2.6.0       # Install separately with CUDA version: pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu118
+# vllm==0.8.5+cu118  # Install from whl file, see INSTALLATION.md
+
+# Installation Notes:
+# 1. For vLLM 0.8.5 (Local): Install torch first, then vLLM whl, then this requirements.txt
+# 2. For vLLM nightly: Install vLLM first (it will install compatible transformers), then install only non-conflicting packages from this file
+# 3. See INSTALLATION.md for detailed installation instructions
