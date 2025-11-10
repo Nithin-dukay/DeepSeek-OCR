@@ -11,7 +11,17 @@ from einops import rearrange, repeat
 from transformers import BatchFeature
 
 from vllm.config import VllmConfig
-from vllm.model_executor import SamplingMetadata
+# Import SamplingMetadata with backward compatibility for different vLLM versions
+try:
+    # Try new import path (vLLM >= 0.9.0)
+    from vllm.v1.sample.metadata import SamplingMetadata
+except ImportError:
+    try:
+        # Fall back to old import path (vLLM 0.8.5)
+        from vllm.model_executor import SamplingMetadata
+    except ImportError:
+        # Last resort: try sampling_metadata module directly
+        from vllm.model_executor.sampling_metadata import SamplingMetadata
 from vllm.model_executor.layers.quantization import QuantizationConfig
 from vllm.model_executor.model_loader.utils import set_default_torch_dtype
 from vllm.multimodal import MULTIMODAL_REGISTRY
