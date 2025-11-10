@@ -162,6 +162,64 @@ for output in model_outputs:
     print(output.outputs[0].text)
 ```
 ## Transformers-Inference
+
+### Preventing Hallucinations (Important!)
+
+**⚠️ If you experience hallucinations (repetitive or incorrect text), especially with handwritten or ancient documents, use the NoRepeatNGramLogitsProcessor:**
+
+```python
+from transformers import AutoModel, AutoTokenizer
+import torch
+import os
+import sys
+
+# Add path to import the hallucination prevention processor
+sys.path.insert(0, 'DeepSeek-OCR-master/DeepSeek-OCR-hf')
+from ngram_norepeat_hf import NoRepeatNGramLogitsProcessor, get_recommended_params
+
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+model_name = 'deepseek-ai/DeepSeek-OCR'
+
+tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+model = AutoModel.from_pretrained(model_name, _attn_implementation='flash_attention_2', trust_remote_code=True, use_safetensors=True)
+model = model.eval().cuda().to(torch.bfloat16)
+
+# Configure hallucination prevention based on document type
+document_type = "handwritten"  # Options: "handwritten", "printed", "table", "general"
+params = get_recommended_params(document_type)
+
+logits_processor = NoRepeatNGramLogitsProcessor(
+    ngram_size=params["ngram_size"],
+    window_size=params["window_size"],
+    whitelist_token_ids=params["whitelist_token_ids"]
+)
+
+prompt = "<image>\nFree OCR. "
+# prompt = "<image>\n<|grounding|>Convert the document to markdown. "
+image_file = 'your_image.jpg'
+output_path = 'your/output/dir'
+
+res = model.infer(
+    tokenizer, 
+    prompt=prompt, 
+    image_file=image_file, 
+    output_path=output_path, 
+    base_size=1024, 
+    image_size=640, 
+    crop_mode=True, 
+    save_results=True, 
+    test_compress=True,
+    logits_processor=logits_processor  # Add this to prevent hallucinations!
+)
+```
+
+**Document Type Parameters:**
+- `handwritten`: For ancient manuscripts, handwritten documents (ngram_size=35, window_size=90)
+- `printed`: For modern printed documents (ngram_size=25, window_size=70)
+- `table`: For documents with tables, allows `<td>` tag repetition (ngram_size=30, window_size=90)
+- `general`: Default balanced settings (ngram_size=30, window_size=90)
+
+### Basic Usage (without hallucination prevention)
 - Transformers
 ```python
 from transformers import AutoModel, AutoTokenizer
@@ -186,6 +244,9 @@ or you can
 cd DeepSeek-OCR-master/DeepSeek-OCR-hf
 python run_dpsk_ocr.py
 ```
+
+### Complete Example
+See `fix_hallucination_example.py` for a comprehensive example demonstrating hallucination prevention for different document types.
 ## Support-Modes
 The current open-source model supports the following modes:
 - Native resolution:
