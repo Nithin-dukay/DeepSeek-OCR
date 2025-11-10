@@ -66,6 +66,11 @@
 
 ## Install
 >Our environment is cuda11.8+torch2.6.0.
+
+**⚠️ Important:** If you encounter `ImportError: cannot import name 'LlamaFlashAttention2'`, please see [ISSUE_7_FIX.md](ISSUE_7_FIX.md) for solutions. Use `transformers==4.46.3` for best compatibility.
+
+**📓 Google Colab Users:** See [COLAB_QUICKSTART.md](COLAB_QUICKSTART.md) for a complete setup guide.
+
 1. Clone this repository and navigate to the DeepSeek-OCR folder
 ```bash
 git clone https://github.com/deepseek-ai/DeepSeek-OCR.git

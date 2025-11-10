@@ -1,3 +1,6 @@
+# IMPORTANT: Do not upgrade transformers beyond 4.46.x
+# Newer versions (4.47+) have breaking changes with LlamaFlashAttention2
+# See ISSUE_7_FIX.md for details
 transformers==4.46.3
 tokenizers==0.20.3
 PyMuPDF
