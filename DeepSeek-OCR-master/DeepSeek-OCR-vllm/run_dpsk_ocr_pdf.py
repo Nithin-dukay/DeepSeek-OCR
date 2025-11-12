@@ -14,7 +14,7 @@ os.environ['VLLM_USE_V1'] = '0'
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
 
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, SKIP_REPEAT, MAX_CONCURRENCY, NUM_WORKERS, CROP_MODE
+from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, SKIP_REPEAT, MAX_CONCURRENCY, NUM_WORKERS, CROP_MODE, MAX_MODEL_LEN, MAX_TOKENS
 
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
@@ -35,7 +35,7 @@ llm = LLM(
     block_size=256,
     enforce_eager=False,
     trust_remote_code=True, 
-    max_model_len=8192,
+    max_model_len=MAX_MODEL_LEN,
     swap_space=0,
     max_num_seqs=MAX_CONCURRENCY,
     tensor_parallel_size=1,
@@ -47,7 +47,7 @@ logits_processors = [NoRepeatNGramLogitsProcessor(ngram_size=20, window_size=50,
 
 sampling_params = SamplingParams(
     temperature=0.0,
-    max_tokens=8192,
+    max_tokens=MAX_TOKENS,
     logits_processors=logits_processors,
     skip_special_tokens=False,
     include_stop_str_in_output=True,
@@ -285,11 +285,19 @@ if __name__ == "__main__":
     jdx = 0
     for output, img in zip(outputs_list, images):
         content = output.outputs[0].text
+        
+        # Check if output was truncated due to token limit
+        finish_reason = output.outputs[0].finish_reason
+        if finish_reason == 'length':
+            print(f'{Colors.YELLOW}Warning: Page {jdx} output was truncated due to token limit.{Colors.RESET}')
+            print(f'{Colors.YELLOW}Consider increasing MAX_TOKENS in config.py (current: {MAX_TOKENS}){Colors.RESET}')
+            print(f'{Colors.YELLOW}Token usage - Prompt: {output.prompt_token_ids.__len__() if hasattr(output, "prompt_token_ids") else "N/A"}, Generated: {len(output.outputs[0].token_ids)}{Colors.RESET}')
 
         if '<｜end▁of▁sentence｜>' in content: # repeat no eos
             content = content.replace('<｜end▁of▁sentence｜>', '')
         else:
             if SKIP_REPEAT:
+                print(f'{Colors.YELLOW}Warning: Page {jdx} skipped due to missing EOS token (possible truncation){Colors.RESET}')
                 continue
 
         

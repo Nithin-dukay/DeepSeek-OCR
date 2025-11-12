@@ -19,7 +19,7 @@ import numpy as np
 from tqdm import tqdm
 from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
 from process.image_process import DeepseekOCRProcessor
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, CROP_MODE
+from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, CROP_MODE, MAX_MODEL_LEN, MAX_TOKENS
 
 
 
@@ -151,7 +151,7 @@ async def stream_generate(image=None, prompt=''):
         model=MODEL_PATH,
         hf_overrides={"architectures": ["DeepseekOCRForCausalLM"]},
         block_size=256,
-        max_model_len=8192,
+        max_model_len=MAX_MODEL_LEN,
         enforce_eager=False,
         trust_remote_code=True,  
         tensor_parallel_size=1,
@@ -163,7 +163,7 @@ async def stream_generate(image=None, prompt=''):
 
     sampling_params = SamplingParams(
         temperature=0.0,
-        max_tokens=8192,
+        max_tokens=MAX_TOKENS,
         logits_processors=logits_processors,
         skip_special_tokens=False,
         # ignore_eos=False,
@@ -173,6 +173,7 @@ async def stream_generate(image=None, prompt=''):
     request_id = f"request-{int(time.time())}"
 
     printed_length = 0  
+    finish_reason = None
 
     if image and '<image>' in prompt:
         request = {
@@ -194,7 +195,13 @@ async def stream_generate(image=None, prompt=''):
             print(new_text, end='', flush=True)
             printed_length = len(full_text)
             final_output = full_text
-    print('\n') 
+            finish_reason = request_output.outputs[0].finish_reason
+    print('\n')
+    
+    # Check if output was truncated due to token limit
+    if finish_reason == 'length':
+        print(f'\033[33mWarning: Output was truncated due to token limit.\033[0m')
+        print(f'\033[33mConsider increasing MAX_TOKENS in config.py (current: {MAX_TOKENS})\033[0m')
 
     return final_output
 

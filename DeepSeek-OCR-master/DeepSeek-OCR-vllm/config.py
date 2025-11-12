@@ -16,6 +16,14 @@ PRINT_NUM_VIS_TOKENS = False
 SKIP_REPEAT = True
 MODEL_PATH = 'deepseek-ai/DeepSeek-OCR' # change to your model path
 
+# Token limits configuration
+# Increase these values if you encounter "length limit was reached" errors
+# Note: Higher values require more GPU memory
+# Default 8192 may be insufficient for complex documents
+# Recommended: 16384 for most cases, 32768 for very complex documents
+MAX_MODEL_LEN = 16384  # Maximum context length for the model
+MAX_TOKENS = 16384     # Maximum tokens to generate in response
+
 # TODO: change INPUT_PATH
 # .pdf: run_dpsk_ocr_pdf.py; 
 # .jpg, .png, .jpeg: run_dpsk_ocr_image.py; 

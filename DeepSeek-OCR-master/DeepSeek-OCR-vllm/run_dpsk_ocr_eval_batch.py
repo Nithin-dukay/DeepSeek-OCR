@@ -7,7 +7,7 @@ if torch.version.cuda == '11.8':
 os.environ['VLLM_USE_V1'] = '0'
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, MAX_CONCURRENCY, CROP_MODE, NUM_WORKERS
+from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, MAX_CONCURRENCY, CROP_MODE, NUM_WORKERS, MAX_MODEL_LEN, MAX_TOKENS
 from concurrent.futures import ThreadPoolExecutor
 import glob
 from PIL import Image
@@ -27,7 +27,7 @@ llm = LLM(
     block_size=256,
     enforce_eager=False,
     trust_remote_code=True, 
-    max_model_len=8192,
+    max_model_len=MAX_MODEL_LEN,
     swap_space=0,
     max_num_seqs = MAX_CONCURRENCY,
     tensor_parallel_size=1,
@@ -38,7 +38,7 @@ logits_processors = [NoRepeatNGramLogitsProcessor(ngram_size=40, window_size=90,
 
 sampling_params = SamplingParams(
     temperature=0.0,
-    max_tokens=8192,
+    max_tokens=MAX_TOKENS,
     logits_processors=logits_processors,
     skip_special_tokens=False,
 )
@@ -142,9 +142,16 @@ if __name__ == "__main__":
 
     os.makedirs(output_path, exist_ok=True)
 
-    for output, image in zip(outputs_list, images_path):
+    for idx, (output, image) in enumerate(zip(outputs_list, images_path)):
 
         content = output.outputs[0].text
+        
+        # Check if output was truncated due to token limit
+        finish_reason = output.outputs[0].finish_reason
+        if finish_reason == 'length':
+            print(f'{Colors.YELLOW}Warning: Image {idx} ({image.split("/")[-1]}) output was truncated due to token limit.{Colors.RESET}')
+            print(f'{Colors.YELLOW}Consider increasing MAX_TOKENS in config.py (current: {MAX_TOKENS}){Colors.RESET}')
+        
         mmd_det_path = output_path + image.split('/')[-1].replace('.jpg', '_det.md')
 
         with open(mmd_det_path, 'w', encoding='utf-8') as afile:
