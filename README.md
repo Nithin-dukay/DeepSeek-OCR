@@ -65,7 +65,20 @@
 
 
 ## Install
+
+### Installation Options
+
+We provide installation guides for different CUDA versions:
+
+- **CUDA 11.8** (Standard): See instructions below
+- **CUDA 12.8 / RTX 5090**: See [CUDA 12.8 Installation Guide](docs/INSTALL_CUDA_12.8.md) 🆕
+
+> **Note for RTX 5090 users:** If you're using an RTX 5090 or similar high-end GPU with CUDA 12.8, please follow the [dedicated installation guide](docs/INSTALL_CUDA_12.8.md) which includes automated installation scripts and detailed troubleshooting steps based on community feedback ([Issue #240](https://github.com/deepseek-ai/DeepSeek-OCR/issues/240)).
+
+### Standard Installation (CUDA 11.8)
+
 >Our environment is cuda11.8+torch2.6.0.
+
 1. Clone this repository and navigate to the DeepSeek-OCR folder
 ```bash
 git clone https://github.com/deepseek-ai/DeepSeek-OCR.git
