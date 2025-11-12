@@ -1,7 +1,49 @@
+import os
+import sys
+
+# Version check for transformers - do this BEFORE importing torch to catch issues early
+try:
+    import transformers
+    from packaging import version
+    
+    transformers_version = version.parse(transformers.__version__)
+    required_version = version.parse("4.46.3")
+    max_version = version.parse("4.47.0")
+    
+    if transformers_version != required_version:
+        print("=" * 70)
+        print("⚠️  WARNING: Incompatible transformers version detected!")
+        print("=" * 70)
+        print(f"Installed version: {transformers.__version__}")
+        print(f"Required version:  4.46.3")
+        print()
+        
+        if transformers_version >= max_version:
+            print("❌ ERROR: transformers 4.47+ has breaking changes!")
+            print("   The LlamaFlashAttention2 import is not available in this version.")
+            print()
+            print("To fix this issue:")
+            print("  pip install transformers==4.46.3 --force-reinstall")
+            print()
+            print("For Colab users:")
+            print("  !pip install transformers==4.46.3 --force-reinstall")
+            print("  Then: Runtime -> Restart runtime")
+            print()
+            print("See: https://github.com/deepseek-ai/DeepSeek-OCR/issues/7")
+            print("=" * 70)
+            sys.exit(1)
+        else:
+            print("⚠️  You may encounter compatibility issues.")
+            print("   Recommended: pip install transformers==4.46.3")
+            print("=" * 70)
+            print()
+except ImportError:
+    print("Warning: Could not verify transformers version (packaging not installed)")
+    print("If you encounter import errors, ensure transformers==4.46.3 is installed")
+    print()
+
 from transformers import AutoModel, AutoTokenizer
 import torch
-import os
-
 
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 

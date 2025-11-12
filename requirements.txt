@@ -1,5 +1,9 @@
+# IMPORTANT: transformers version must be 4.46.3 or compatible
+# Newer versions (4.47+) have breaking changes with LlamaFlashAttention2 import
+# See: https://github.com/deepseek-ai/DeepSeek-OCR/issues/7
 transformers==4.46.3
 tokenizers==0.20.3
+packaging
 PyMuPDF
 img2pdf
 einops

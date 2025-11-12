@@ -57,6 +57,8 @@
 
 ## Contents
 - [Install](#install)
+- [Troubleshooting](#troubleshooting)
+- [Google Colab Setup](#google-colab-setup)
 - [vLLM Inference](#vllm-inference)
 - [Transformers Inference](#transformers-inference)
   
@@ -85,6 +87,99 @@ pip install -r requirements.txt
 pip install flash-attn==2.7.3 --no-build-isolation
 ```
 **Note:** if you want vLLM and transformers codes to run in the same environment, you don't need to worry about this installation error like: vllm 0.8.5+cu118 requires transformers>=4.51.1
+
+## Troubleshooting
+
+### ImportError: cannot import name 'LlamaFlashAttention2' (Issue #7)
+
+**Problem:** When using transformers 4.47+ or newer versions, you may encounter:
+```
+ImportError: cannot import name 'LlamaFlashAttention2' from 'transformers.models.llama.modeling_llama'
+```
+
+**Root Cause:** The `LlamaFlashAttention2` class was removed/renamed in transformers 4.47+, causing compatibility issues with DeepSeek-OCR's custom model code.
+
+**Solution:**
+
+1. **Check your environment first:**
+   ```bash
+   python check_environment.py
+   ```
+
+2. **Install the correct transformers version:**
+   ```bash
+   pip install transformers==4.46.3 --force-reinstall
+   ```
+
+3. **For Google Colab users:**
+   ```python
+   !pip install transformers==4.46.3 --force-reinstall
+   # Then restart the runtime: Runtime -> Restart runtime
+   ```
+
+4. **Verify installation:**
+   ```python
+   import transformers
+   print(transformers.__version__)  # Should output: 4.46.3
+   ```
+
+**Important Notes:**
+- ⚠️ **You MUST use transformers 4.46.3** - newer versions (4.47+) have breaking changes
+- The `requirements.txt` file specifies the correct version
+- If you're in a shared environment (like Colab), you may need to restart the runtime after installation
+- See the related issue: [DeepSeek-VL2 #87](https://github.com/deepseek-ai/DeepSeek-VL2/issues/87)
+
+### Environment Verification
+
+Before running DeepSeek-OCR, verify your environment:
+
+```bash
+python check_environment.py
+```
+
+This script will check:
+- ✅ transformers version (must be 4.46.3)
+- ✅ All required dependencies
+- ✅ Optional packages (flash-attn)
+- ✅ Provide fix instructions if issues are found
+
+### Common Issues
+
+**Issue: "ModuleNotFoundError: No module named 'packaging'"**
+```bash
+pip install packaging
+```
+
+**Issue: Flash Attention not working**
+```bash
+pip install flash-attn==2.7.3 --no-build-isolation
+```
+
+**Issue: CUDA out of memory**
+- Reduce `base_size` and `image_size` parameters
+- Use smaller model configurations (Tiny or Small instead of Base/Large)
+
+## Google Colab Setup
+
+For detailed instructions on setting up DeepSeek-OCR in Google Colab, see [COLAB_SETUP.md](COLAB_SETUP.md).
+
+**Quick Start for Colab:**
+```python
+# 1. Install correct transformers version
+!pip install transformers==4.46.3 --force-reinstall
+!pip install -r requirements.txt
+
+# 2. RESTART RUNTIME (Runtime -> Restart runtime)
+
+# 3. Verify environment
+!python check_environment.py
+
+# 4. Run DeepSeek-OCR
+%cd DeepSeek-OCR-master/DeepSeek-OCR-hf
+!python run_dpsk_ocr.py
+```
+
+**⚠️ CRITICAL:** You MUST restart the Colab runtime after installing transformers 4.46.3 for the changes to take effect.
 
 ## vLLM-Inference
 - VLLM:
