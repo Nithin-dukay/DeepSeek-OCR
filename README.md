@@ -59,6 +59,7 @@
 - [Install](#install)
 - [vLLM Inference](#vllm-inference)
 - [Transformers Inference](#transformers-inference)
+- [Table Recognition](#table-recognition)
   
 
 
@@ -204,8 +205,69 @@ The current open-source model supports the following modes:
 # figures in document: <image>\nParse the figure.
 # general: <image>\nDescribe this image in detail.
 # rec: <image>\nLocate <|ref|>xxxx<|/ref|> in the image.
+# table to HTML: <image>\n<|grounding|>Convert the table to HTML.
+# table to markdown: <image>\n<|grounding|>Convert the table to markdown.
 # '先天下之忧而忧'
 ```
+
+## Table Recognition
+
+DeepSeek-OCR provides excellent support for table recognition and conversion to HTML or Markdown format. When working with tables, it's important to configure the n-gram no-repeat processor with whitelist tokens to allow repetition of table-specific HTML tags.
+
+### Table-to-HTML Conversion
+
+**Recommended Prompt:**
+```python
+prompt = "<image>\n<|grounding|>Convert the table to HTML."
+```
+
+**Important Configuration:**
+When converting tables to HTML, you must whitelist the `<td>` and `</td>` tokens (IDs: 128821, 128822) to allow their repetition in the output:
+
+```python
+# For vLLM
+from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
+
+logits_processors = [
+    NoRepeatNGramLogitsProcessor(
+        ngram_size=30, 
+        window_size=90, 
+        whitelist_token_ids={128821, 128822}  # <td>, </td>
+    )
+]
+
+sampling_params = SamplingParams(
+    temperature=0.0,
+    max_tokens=8192,
+    logits_processors=logits_processors,
+    skip_special_tokens=False,
+)
+```
+
+### Alternative Prompts for Tables
+
+```python
+# For table extraction with markdown format
+prompt = "<image>\n<|grounding|>Convert the table to markdown."
+
+# For complex tables with nested structures
+prompt = "<image>\n<|grounding|>Extract and convert all tables to HTML."
+
+# For tables within documents
+prompt = "<image>\n<|grounding|>Convert the document to markdown."  # Tables will be included
+```
+
+### Example Usage
+
+See `table_to_html_example.py` for a complete working example of table recognition and HTML conversion.
+
+For more detailed information, examples, and troubleshooting, see [TABLE_RECOGNITION.md](TABLE_RECOGNITION.md).
+
+**Key Points:**
+- Always use the `<|grounding|>` tag for structured table output
+- Whitelist `<td>` and `</td>` tokens (128821, 128822) to prevent repetition penalties
+- Use `ngram_size=30` and `window_size=90` for optimal table recognition
+- Set `skip_special_tokens=False` to preserve HTML structure
 
 
 ## Visualizations

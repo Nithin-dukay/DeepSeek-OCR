@@ -33,6 +33,8 @@ PROMPT = '<image>\n<|grounding|>Convert the document to markdown.'
 # figures in document: <image>\nParse the figure.
 # general: <image>\nDescribe this image in detail.
 # rec: <image>\nLocate <|ref|>xxxx<|/ref|> in the image.
+# table to HTML: <image>\n<|grounding|>Convert the table to HTML.
+# table to markdown: <image>\n<|grounding|>Convert the table to markdown.
 # '先天下之忧而忧'
 # .......
 
