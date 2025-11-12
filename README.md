@@ -59,6 +59,7 @@
 - [Install](#install)
 - [vLLM Inference](#vllm-inference)
 - [Transformers Inference](#transformers-inference)
+- [Streaming Solutions (Issue #249)](#streaming-solutions-issue-249)
   
 
 
@@ -220,6 +221,50 @@ The current open-source model supports the following modes:
 </tr>
 </table>
 
+## Streaming Solutions (Issue #249)
+
+**Problem**: The `model.infer()` method prints output to console but returns `None`. How to stream tokens to clients?
+
+**Solutions**: We provide three solutions with increasing complexity:
+
+### Solution 1: Use `eval_mode=True` (Simple)
+```python
+result = model.infer(
+    tokenizer, 
+    prompt=prompt, 
+    image_file=image_file,
+    eval_mode=True  # Returns the full output instead of None
+)
+# Now you can send 'result' to your client
+```
+
+### Solution 2: Custom Streamer (Token Streaming)
+Create a custom `TextStreamer` that captures tokens in a queue for real-time streaming. See `examples/solution2_custom_streamer.py` for implementation.
+
+### Solution 3: vLLM with FastAPI (Production - Recommended)
+Use the vLLM implementation with native async streaming support:
+
+```bash
+# Start the streaming API server
+python examples/solution3_vllm_fastapi_server.py
+```
+
+Then consume the API:
+```python
+import requests
+response = requests.post(
+    "http://localhost:8000/ocr/stream",
+    json={"image_path": "image.jpg", "prompt": "<image>\nFree OCR."},
+    stream=True
+)
+for line in response.iter_lines():
+    if line.startswith(b'data: '):
+        print(json.loads(line[6:])['token'], end='', flush=True)
+```
+
+**📚 Full Documentation**: See [`ISSUE_249_SOLUTION.md`](ISSUE_249_SOLUTION.md) and [`examples/README.md`](examples/README.md) for detailed guides, code examples, and client implementations (Python, JavaScript, WebSocket).
+
+**Performance**: Solution 3 achieves ~2500 tokens/s on A100-40G with native streaming support.
 
 ## Acknowledgement
 

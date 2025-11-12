@@ -1,0 +1,24 @@
+# Requirements for DeepSeek-OCR Streaming Solutions
+
+# Core dependencies (already in main requirements.txt)
+transformers==4.46.3
+tokenizers==0.20.3
+torch
+torchvision
+Pillow
+numpy
+
+# Solution 3 dependencies (vLLM + FastAPI)
+vllm>=0.8.5
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+websockets>=12.0
+
+# Optional: For client examples
+requests>=2.31.0
+aiohttp>=3.9.0
+
+# Note: For vLLM, you may need to install from specific wheel
+# See: https://github.com/vllm-project/vllm/releases
+# pip install vllm-0.8.5+cu118-cp38-abi3-manylinux1_x86_64.whl
