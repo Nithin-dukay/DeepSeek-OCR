@@ -59,6 +59,8 @@
 - [Install](#install)
 - [vLLM Inference](#vllm-inference)
 - [Transformers Inference](#transformers-inference)
+- [🆕 Troubleshooting Handwritten OCR](#troubleshooting-handwritten-ocr)
+- [🆕 Examples and Tools](#examples-and-tools)
   
 
 
@@ -207,6 +209,56 @@ The current open-source model supports the following modes:
 # '先天下之忧而忧'
 ```
 
+
+## Troubleshooting Handwritten OCR
+
+**🆕 Experiencing hallucinations on handwritten documents?** (Issue #191)
+
+We've created comprehensive resources to help you achieve better accuracy on handwritten and historical documents:
+
+### Quick Fix for Hallucinations
+
+❌ **Don't use:** `<image>\nFree OCR.`  
+✅ **Use instead:** `<image>\n<|grounding|>Extract all text from this handwritten document.`
+
+### Resources
+
+1. **[Troubleshooting Guide](TROUBLESHOOTING_HANDWRITTEN_OCR.md)** - Comprehensive guide for fixing hallucinations
+2. **[Solution Summary](SOLUTION_SUMMARY.md)** - Quick overview of the solution
+3. **[Optimized Script](DeepSeek-OCR-master/DeepSeek-OCR-hf/run_dpsk_ocr_handwritten.py)** - Production-ready script for handwritten documents
+4. **[Configuration Helper](DeepSeek-OCR-master/DeepSeek-OCR-hf/ocr_config_helper.py)** - Auto-configuration tool
+5. **[Examples](examples/)** - Practical examples for different document types
+
+### Quick Start for Handwritten Documents
+
+```bash
+# Step 1: Analyze your image and get recommendations
+python DeepSeek-OCR-master/DeepSeek-OCR-hf/ocr_config_helper.py --image your_document.jpg
+
+# Step 2: Run optimized OCR (use the command recommended by the helper)
+python DeepSeek-OCR-master/DeepSeek-OCR-hf/run_dpsk_ocr_handwritten.py \
+    --image your_document.jpg \
+    --output results/ \
+    --doc-type handwritten \
+    --preprocess
+```
+
+See the [Troubleshooting Guide](TROUBLESHOOTING_HANDWRITTEN_OCR.md) for detailed instructions.
+
+## Examples and Tools
+
+### Practical Examples
+
+- **[Ancient Portuguese Documents](examples/example_handwritten_portuguese.py)** - Optimized for historical handwritten text
+- **[Batch Processing](examples/example_batch_processing.py)** - Process multiple documents efficiently
+- **[Region-Based OCR](examples/example_region_based_ocr.py)** - Handle complex layouts by processing regions
+
+See the [Examples README](examples/README.md) for detailed usage instructions.
+
+### Tools
+
+- **[Configuration Helper](DeepSeek-OCR-master/DeepSeek-OCR-hf/ocr_config_helper.py)** - Automatically analyze images and recommend optimal settings
+- **[Optimized Inference Script](DeepSeek-OCR-master/DeepSeek-OCR-hf/run_dpsk_ocr_handwritten.py)** - Production-ready script with preprocessing and validation
 
 ## Visualizations
 <table>
