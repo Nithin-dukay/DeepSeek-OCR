@@ -59,6 +59,7 @@
 - [Install](#install)
 - [vLLM Inference](#vllm-inference)
 - [Transformers Inference](#transformers-inference)
+- [Troubleshooting](#troubleshooting)
   
 
 
@@ -220,6 +221,70 @@ The current open-source model supports the following modes:
 </tr>
 </table>
 
+
+## Troubleshooting
+
+### Issue #244: ValidationError - Model architecture not supported
+
+**Problem**: When using `vllm serve deepseek-ai/DeepSeek-OCR`, you may encounter:
+```
+pydantic_core.ValidationError: 1 validation error for ModelConfig
+Value error, Model architectures 'DeepseekOCRForCausallM' are not supported
+```
+
+**Root Cause**: The model's config.json may have a typo in the architecture name (`DeepseekOCRForCausallM` with double 'l' instead of `DeepseekOCRForCausalLM`).
+
+**Solutions**:
+
+#### Option 1: Use the provided serving script (Recommended)
+```bash
+python serve_deepseek_ocr.py --model deepseek-ai/DeepSeek-OCR --port 8000
+```
+
+This script automatically registers the model with the correct architecture name.
+
+#### Option 2: Fix the model config file
+```bash
+python fix_model_config.py
+```
+
+This utility will automatically find and fix the typo in your downloaded model's config.json file.
+
+#### Option 3: Use the existing inference scripts
+The provided inference scripts already handle model registration correctly:
+```bash
+cd DeepSeek-OCR-master/DeepSeek-OCR-vllm
+python run_dpsk_ocr_image.py  # For images
+python run_dpsk_ocr_pdf.py    # For PDFs
+```
+
+#### Option 4: Manual registration in your code
+```python
+import register_deepseek_ocr  # Import this before using vLLM
+from vllm import LLM
+
+llm = LLM(model="deepseek-ai/DeepSeek-OCR")
+```
+
+### Other Common Issues
+
+**Issue**: `ImportError` when running scripts
+- **Solution**: Make sure you're in the correct directory and all dependencies are installed:
+  ```bash
+  pip install -r requirements.txt
+  ```
+
+**Issue**: CUDA out of memory
+- **Solution**: Reduce `gpu_memory_utilization` or `max_model_len`:
+  ```bash
+  python serve_deepseek_ocr.py --gpu-memory-utilization 0.7 --max-model-len 4096
+  ```
+
+**Issue**: Model not found in HuggingFace cache
+- **Solution**: Download the model first:
+  ```bash
+  huggingface-cli download deepseek-ai/DeepSeek-OCR
+  ```
 
 ## Acknowledgement
 
