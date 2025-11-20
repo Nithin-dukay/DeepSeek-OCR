@@ -135,12 +135,32 @@ def re_match(text):
     return matches, mathes_image, mathes_other
 
 
+def sanitize_coordinates(coord_str):
+    """
+    Sanitize coordinate string by removing spurious alphabetic characters.
+    Handles cases like '[[550, s 331, 652, 345]]' -> '[[550, 331, 652, 345]]'
+    """
+    # Remove spurious alphabetic characters that appear between numbers
+    # This regex matches letters (with optional spaces) that appear between digits/brackets/commas
+    sanitized = re.sub(r'(?<=[\d\[\],\s])\s*[a-zA-Z]+\s*(?=[\d\[\],\s])', ' ', coord_str)
+    # Clean up any extra whitespace
+    sanitized = re.sub(r'\s+', ' ', sanitized)
+    # Remove spaces after opening brackets and before closing brackets
+    sanitized = re.sub(r'\[\s+', '[', sanitized)
+    sanitized = re.sub(r'\s+\]', ']', sanitized)
+    # Remove spaces around commas
+    sanitized = re.sub(r'\s*,\s*', ',', sanitized)
+    return sanitized
+
+
 def extract_coordinates_and_label(ref_text, image_width, image_height):
 
 
     try:
         label_type = ref_text[1]
-        cor_list = eval(ref_text[2])
+        # Sanitize the coordinate string before eval
+        coord_str = sanitize_coordinates(ref_text[2])
+        cor_list = eval(coord_str)
     except Exception as e:
         print(e)
         return None
