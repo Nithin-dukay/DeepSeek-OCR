@@ -57,14 +57,49 @@ def re_match(text):
     return matches, mathes_image, mathes_other
 
 
+def sanitize_coordinate_string(coord_str):
+    """
+    Sanitize malformed coordinate strings before parsing.
+    Handles cases like '[[550, s 331, 652, 345]]' where 's 331' should be '331'.
+    
+    Args:
+        coord_str: The coordinate string to sanitize
+        
+    Returns:
+        Sanitized coordinate string
+    """
+    # Remove patterns like 's <number>' and replace with just '<number>'
+    # This handles the case where model generates 's 331' instead of '331'
+    sanitized = re.sub(r'\bs\s+(\d+)', r'\1', coord_str)
+    
+    # Remove any other stray single letters followed by spaces before numbers
+    sanitized = re.sub(r'\b[a-zA-Z]\s+(\d+)', r'\1', sanitized)
+    
+    # Clean up any extra spaces within brackets
+    sanitized = re.sub(r'\[\s+', '[', sanitized)
+    sanitized = re.sub(r'\s+\]', ']', sanitized)
+    sanitized = re.sub(r',\s+', ', ', sanitized)
+    
+    return sanitized
+
+
 def extract_coordinates_and_label(ref_text, image_width, image_height):
 
 
     try:
         label_type = ref_text[1]
-        cor_list = eval(ref_text[2])
+        coord_str = ref_text[2]
+        
+        # Sanitize the coordinate string before parsing
+        sanitized_coord_str = sanitize_coordinate_string(coord_str)
+        
+        # Parse the sanitized coordinate string
+        cor_list = eval(sanitized_coord_str)
     except Exception as e:
-        print(e)
+        print(f"Error parsing coordinates: {e}")
+        print(f"Original coordinate string: {ref_text[2] if len(ref_text) > 2 else 'N/A'}")
+        if 'sanitized_coord_str' in locals():
+            print(f"Sanitized coordinate string: {sanitized_coord_str}")
         return None
 
     return (label_type, cor_list)
