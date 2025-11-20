@@ -221,6 +221,54 @@ The current open-source model supports the following modes:
 </table>
 
 
+## Troubleshooting
+
+### Issue: vLLM Serve ValidationError (Issue #244)
+
+If you encounter this error when using `vllm serve`:
+```
+pydantic_core.ValidationError: 1 validation error for ModelConfig
+Value error, Model architectures 'DeepseekOCRForCausallM' are not supported
+```
+
+**Solution**: The custom model needs to be registered with vLLM. Use one of these approaches:
+
+1. **Use the provided Python scripts** (Recommended):
+```bash
+cd DeepSeek-OCR-master/DeepSeek-OCR-vllm
+python run_dpsk_ocr_image.py  # For images
+python run_dpsk_ocr_pdf.py    # For PDFs
+```
+
+2. **Use the custom serve script**:
+```bash
+cd DeepSeek-OCR-master/DeepSeek-OCR-vllm
+python serve_deepseek_ocr.py --model deepseek-ai/DeepSeek-OCR --port 8000
+```
+
+3. **Use Python API with model registration**:
+```python
+from vllm import LLM, SamplingParams
+from vllm.model_executor.models.registry import ModelRegistry
+import sys
+sys.path.insert(0, 'DeepSeek-OCR-master/DeepSeek-OCR-vllm')
+from deepseek_ocr import DeepseekOCRForCausalLM
+
+# Register the model
+ModelRegistry.register_model("DeepseekOCRForCausalLM", DeepseekOCRForCausalLM)
+
+# Now create LLM instance
+llm = LLM(
+    model="deepseek-ai/DeepSeek-OCR",
+    hf_overrides={"architectures": ["DeepseekOCRForCausalLM"]},
+    enable_prefix_caching=False,
+    mm_processor_cache_gb=0,
+    trust_remote_code=True
+)
+```
+
+For detailed instructions, see [VLLM_SERVE_GUIDE.md](VLLM_SERVE_GUIDE.md).
+
 ## Acknowledgement
 
 We would like to thank [Vary](https://github.com/Ucas-HaoranWei/Vary/), [GOT-OCR2.0](https://github.com/Ucas-HaoranWei/GOT-OCR2.0/), [MinerU](https://github.com/opendatalab/MinerU), [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR), [OneChart](https://github.com/LingyvKong/OneChart), [Slow Perception](https://github.com/Ucas-HaoranWei/Slow-Perception) for their valuable models and ideas.
