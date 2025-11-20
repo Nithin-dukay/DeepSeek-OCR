@@ -16,6 +16,12 @@ PRINT_NUM_VIS_TOKENS = False
 SKIP_REPEAT = True
 MODEL_PATH = 'deepseek-ai/DeepSeek-OCR' # change to your model path
 
+# Enhanced repetition detection parameters (Fix for Issue #250)
+# These parameters help prevent infinite loops when the model encounters repetitive patterns
+ENABLE_ENHANCED_REPETITION_DETECTION = True  # Enable enhanced pattern detection
+MAX_TOKEN_REPETITION_RATIO = 0.4  # Max ratio of same token in window (0.4 = 40%)
+MAX_CONSECUTIVE_REPETITIONS = 5  # Max consecutive identical tokens allowed
+
 # TODO: change INPUT_PATH
 # .pdf: run_dpsk_ocr_pdf.py; 
 # .jpg, .png, .jpeg: run_dpsk_ocr_image.py; 
