@@ -19,7 +19,11 @@ import numpy as np
 from tqdm import tqdm
 from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
 from process.image_process import DeepseekOCRProcessor
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, CROP_MODE
+from config import (
+    MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, CROP_MODE,
+    NGRAM_SIZE, WINDOW_SIZE, WHITELIST_TOKEN_IDS, 
+    MIN_NGRAM_SIZE, MAX_CONSECUTIVE_REPEATS, ENABLE_REPETITION_PREVENTION
+)
 
 
 
@@ -159,7 +163,18 @@ async def stream_generate(image=None, prompt=''):
     )
     engine = AsyncLLMEngine.from_engine_args(engine_args)
     
-    logits_processors = [NoRepeatNGramLogitsProcessor(ngram_size=30, window_size=90, whitelist_token_ids= {128821, 128822})] #whitelist: <td>, </td> 
+    # Configure repetition prevention to avoid infinite loops (e.g., ". . . . . . .")
+    # See config.py for parameter descriptions and GitHub Issue #250
+    if ENABLE_REPETITION_PREVENTION:
+        logits_processors = [NoRepeatNGramLogitsProcessor(
+            ngram_size=NGRAM_SIZE,
+            window_size=WINDOW_SIZE,
+            whitelist_token_ids=WHITELIST_TOKEN_IDS,
+            min_ngram_size=MIN_NGRAM_SIZE,
+            max_consecutive_repeats=MAX_CONSECUTIVE_REPEATS
+        )]
+    else:
+        logits_processors = [] 
 
     sampling_params = SamplingParams(
         temperature=0.0,

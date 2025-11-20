@@ -16,6 +16,46 @@ PRINT_NUM_VIS_TOKENS = False
 SKIP_REPEAT = True
 MODEL_PATH = 'deepseek-ai/DeepSeek-OCR' # change to your model path
 
+# ============================================================================
+# REPETITION PREVENTION SETTINGS
+# ============================================================================
+# These settings help prevent infinite loops and excessive repetition
+# (e.g., ". . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .")
+# See: https://github.com/deepseek-ai/DeepSeek-OCR/issues/250
+
+# N-gram size for repetition detection
+# - Larger values catch longer repetitive patterns
+# - Recommended: 20-40 for document OCR
+# - Image inference: 30, PDF inference: 20, Batch eval: 40
+NGRAM_SIZE = 30
+
+# Window size for n-gram search
+# - How many tokens back to search for repeated n-grams
+# - Larger values use more memory but catch distant repetitions
+# - Recommended: 50-100
+WINDOW_SIZE = 90
+
+# Whitelist token IDs (tokens allowed to repeat)
+# - Useful for structural elements like table tags
+# - 128821: <td> (table cell start)
+# - 128822: </td> (table cell end)
+# - Add more token IDs as needed for your use case
+WHITELIST_TOKEN_IDS = {128821, 128822}
+
+# Minimum n-gram size for short pattern detection
+# - Helps catch patterns like ". . . ."
+# - Recommended: 2-3
+MIN_NGRAM_SIZE = 2
+
+# Maximum consecutive identical tokens allowed
+# - Prevents immediate repetition like "the the the the"
+# - Recommended: 3-5
+MAX_CONSECUTIVE_REPEATS = 3
+
+# Enable repetition detection and early stopping
+# - Set to False to disable all repetition prevention
+ENABLE_REPETITION_PREVENTION = True
+
 # TODO: change INPUT_PATH
 # .pdf: run_dpsk_ocr_pdf.py; 
 # .jpg, .png, .jpeg: run_dpsk_ocr_image.py; 

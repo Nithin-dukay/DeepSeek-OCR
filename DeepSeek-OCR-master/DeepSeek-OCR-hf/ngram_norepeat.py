@@ -1,13 +1,19 @@
+"""
+N-gram Repetition Prevention for HuggingFace Transformers
+
+This module provides the NoRepeatNGramLogitsProcessor for use with
+HuggingFace transformers generation to prevent infinite loops and
+excessive repetition in generated text.
+"""
+
 import torch
 from transformers import LogitsProcessor
-from transformers.generation.logits_process import _calc_banned_ngram_tokens
 from typing import List, Set, Optional
-from collections import Counter
 
 
 class NoRepeatNGramLogitsProcessor(LogitsProcessor):
     """
-    Enhanced N-gram repetition prevention processor.
+    Enhanced N-gram repetition prevention processor for HuggingFace transformers.
     
     This processor prevents the model from generating repetitive patterns by:
     1. Standard n-gram blocking (prevents exact n-gram repetition)
@@ -45,14 +51,14 @@ class NoRepeatNGramLogitsProcessor(LogitsProcessor):
         self.min_ngram_size = min_ngram_size
         self.max_consecutive_repeats = max_consecutive_repeats
     
-    def _detect_consecutive_repeats(self, input_ids: List[int]) -> Set[int]:
+    def _detect_consecutive_repeats(self, input_ids: torch.LongTensor) -> Set[int]:
         """Detect tokens that have been repeated consecutively too many times."""
         banned = set()
-        if len(input_ids) < self.max_consecutive_repeats:
+        if input_ids.shape[-1] < self.max_consecutive_repeats:
             return banned
         
         # Check if the last N tokens are all the same
-        recent_tokens = input_ids[-self.max_consecutive_repeats:]
+        recent_tokens = input_ids[0, -self.max_consecutive_repeats:].tolist()
         if len(set(recent_tokens)) == 1:
             # All recent tokens are identical, ban this token
             token = recent_tokens[0]
@@ -61,22 +67,23 @@ class NoRepeatNGramLogitsProcessor(LogitsProcessor):
         
         return banned
     
-    def _detect_short_patterns(self, input_ids: List[int]) -> Set[int]:
+    def _detect_short_patterns(self, input_ids: torch.LongTensor) -> Set[int]:
         """Detect short repetitive patterns (e.g., 'A B A B A B')."""
         banned = set()
+        input_ids_list = input_ids[0].tolist()
         
         # Check for 2-gram patterns (most common for dots: '. . . .')
-        if len(input_ids) >= self.min_ngram_size * 3:
-            for pattern_size in range(self.min_ngram_size, min(5, len(input_ids) // 3)):
+        if len(input_ids_list) >= self.min_ngram_size * 3:
+            for pattern_size in range(self.min_ngram_size, min(5, len(input_ids_list) // 3)):
                 # Get the last pattern
-                last_pattern = tuple(input_ids[-pattern_size:])
+                last_pattern = tuple(input_ids_list[-pattern_size:])
                 
                 # Check if this pattern repeats multiple times at the end
                 repeat_count = 0
-                for i in range(len(input_ids) - pattern_size, -1, -pattern_size):
+                for i in range(len(input_ids_list) - pattern_size, -1, -pattern_size):
                     if i < 0:
                         break
-                    pattern = tuple(input_ids[i:i + pattern_size])
+                    pattern = tuple(input_ids_list[i:i + pattern_size])
                     if pattern == last_pattern:
                         repeat_count += 1
                     else:
@@ -91,36 +98,52 @@ class NoRepeatNGramLogitsProcessor(LogitsProcessor):
         
         return banned
     
-    def __call__(self, input_ids: List[int], scores: torch.FloatTensor) -> torch.FloatTensor:
-        banned_tokens = set()
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
+        """
+        Process logits to prevent n-gram repetition.
         
-        # 1. Standard n-gram blocking
-        if len(input_ids) >= self.ngram_size:
-            current_prefix = tuple(input_ids[-(self.ngram_size - 1):])
+        Args:
+            input_ids: Tensor of shape (batch_size, sequence_length)
+            scores: Tensor of shape (batch_size, vocab_size)
+        
+        Returns:
+            Modified scores with banned tokens set to -inf
+        """
+        batch_size = scores.shape[0]
+        
+        for batch_idx in range(batch_size):
+            banned_tokens = set()
             
-            search_start = max(0, len(input_ids) - self.window_size)
-            search_end = len(input_ids) - self.ngram_size + 1
+            # Get the sequence for this batch item
+            sequence = input_ids[batch_idx]
             
-            for i in range(search_start, search_end):
-                ngram = tuple(input_ids[i:i + self.ngram_size])
-                if ngram[:-1] == current_prefix:
-                    banned_tokens.add(ngram[-1])
-        
-        # 2. Detect consecutive repeats (e.g., '. . . .')
-        consecutive_banned = self._detect_consecutive_repeats(input_ids)
-        banned_tokens.update(consecutive_banned)
-        
-        # 3. Detect short repetitive patterns
-        pattern_banned = self._detect_short_patterns(input_ids)
-        banned_tokens.update(pattern_banned)
-        
-        # Remove whitelisted tokens
-        banned_tokens = banned_tokens - self.whitelist_token_ids
-        
-        # Apply bans to scores
-        if banned_tokens:
-            scores = scores.clone()
-            for token in banned_tokens:
-                scores[token] = -float("inf")
+            # 1. Standard n-gram blocking
+            if sequence.shape[-1] >= self.ngram_size:
+                current_prefix = tuple(sequence[-(self.ngram_size - 1):].tolist())
+                
+                search_start = max(0, sequence.shape[-1] - self.window_size)
+                search_end = sequence.shape[-1] - self.ngram_size + 1
+                
+                sequence_list = sequence.tolist()
+                for i in range(search_start, search_end):
+                    ngram = tuple(sequence_list[i:i + self.ngram_size])
+                    if ngram[:-1] == current_prefix:
+                        banned_tokens.add(ngram[-1])
+            
+            # 2. Detect consecutive repeats (e.g., '. . . .')
+            consecutive_banned = self._detect_consecutive_repeats(input_ids[batch_idx:batch_idx+1])
+            banned_tokens.update(consecutive_banned)
+            
+            # 3. Detect short repetitive patterns
+            pattern_banned = self._detect_short_patterns(input_ids[batch_idx:batch_idx+1])
+            banned_tokens.update(pattern_banned)
+            
+            # Remove whitelisted tokens
+            banned_tokens = banned_tokens - self.whitelist_token_ids
+            
+            # Apply bans to scores
+            if banned_tokens:
+                for token in banned_tokens:
+                    scores[batch_idx, token] = -float("inf")
         
         return scores

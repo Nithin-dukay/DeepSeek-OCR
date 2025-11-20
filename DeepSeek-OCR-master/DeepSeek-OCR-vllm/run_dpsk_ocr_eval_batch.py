@@ -7,7 +7,11 @@ if torch.version.cuda == '11.8':
 os.environ['VLLM_USE_V1'] = '0'
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, MAX_CONCURRENCY, CROP_MODE, NUM_WORKERS
+from config import (
+    MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, MAX_CONCURRENCY, CROP_MODE, NUM_WORKERS,
+    NGRAM_SIZE, WINDOW_SIZE, WHITELIST_TOKEN_IDS,
+    MIN_NGRAM_SIZE, MAX_CONSECUTIVE_REPEATS, ENABLE_REPETITION_PREVENTION
+)
 from concurrent.futures import ThreadPoolExecutor
 import glob
 from PIL import Image
@@ -34,7 +38,19 @@ llm = LLM(
     gpu_memory_utilization=0.9,
 )
 
-logits_processors = [NoRepeatNGramLogitsProcessor(ngram_size=40, window_size=90, whitelist_token_ids= {128821, 128822})] #window for fast；whitelist_token_ids: <td>,</td>
+# Configure repetition prevention to avoid infinite loops (e.g., ". . . . . . .")
+# For batch evaluation, we use larger ngram_size (40) for better quality
+# See config.py for parameter descriptions and GitHub Issue #250
+if ENABLE_REPETITION_PREVENTION:
+    logits_processors = [NoRepeatNGramLogitsProcessor(
+        ngram_size=40,  # Larger for batch eval quality
+        window_size=WINDOW_SIZE,
+        whitelist_token_ids=WHITELIST_TOKEN_IDS,
+        min_ngram_size=MIN_NGRAM_SIZE,
+        max_consecutive_repeats=MAX_CONSECUTIVE_REPEATS
+    )]
+else:
+    logits_processors = []
 
 sampling_params = SamplingParams(
     temperature=0.0,
