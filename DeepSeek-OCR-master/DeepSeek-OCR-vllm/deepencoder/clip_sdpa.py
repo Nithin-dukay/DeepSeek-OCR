@@ -83,13 +83,25 @@ def get_abs_pos(abs_pos, tgt_size):
         old_pos_embed = old_pos_embed.view(1, src_size, src_size, dim).permute(0, 3, 1,
                                                                                     2).contiguous()
         old_pos_embed = old_pos_embed.to(torch.float32)
-        new_pos_embed = F.interpolate(
-            old_pos_embed,
-            size=(tgt_size, tgt_size),
-            mode='bicubic',
-            antialias=True,
-            align_corners=False,
-        ).to(dtype)
+        
+        # MPS (Apple Silicon) doesn't support bicubic interpolation with antialias
+        # Use bilinear interpolation as a fallback for MPS devices
+        if old_pos_embed.device.type == 'mps':
+            new_pos_embed = F.interpolate(
+                old_pos_embed,
+                size=(tgt_size, tgt_size),
+                mode='bilinear',
+                align_corners=False,
+            ).to(dtype)
+        else:
+            new_pos_embed = F.interpolate(
+                old_pos_embed,
+                size=(tgt_size, tgt_size),
+                mode='bicubic',
+                antialias=True,
+                align_corners=False,
+            ).to(dtype)
+        
         new_pos_embed = new_pos_embed.permute(0, 2, 3, 1)
         new_pos_embed = new_pos_embed.view(tgt_size * tgt_size, dim)
         vision_pos_embed = torch.cat([cls_token, new_pos_embed], dim=0)

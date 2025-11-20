@@ -25,13 +25,25 @@ def get_abs_pos(abs_pos, tgt_size):
     if src_size != tgt_size:
         old_pos_embed = abs_pos.permute(0, 3, 1, 2)
         old_pos_embed = old_pos_embed.to(torch.float32)
-        new_pos_embed = F.interpolate(
-            old_pos_embed,
-            size=(tgt_size, tgt_size),
-            mode='bicubic',
-            antialias=True,
-            align_corners=False,
-        ).to(dtype)
+        
+        # MPS (Apple Silicon) doesn't support bicubic interpolation with antialias
+        # Use bilinear interpolation as a fallback for MPS devices
+        if old_pos_embed.device.type == 'mps':
+            new_pos_embed = F.interpolate(
+                old_pos_embed,
+                size=(tgt_size, tgt_size),
+                mode='bilinear',
+                align_corners=False,
+            ).to(dtype)
+        else:
+            new_pos_embed = F.interpolate(
+                old_pos_embed,
+                size=(tgt_size, tgt_size),
+                mode='bicubic',
+                antialias=True,
+                align_corners=False,
+            ).to(dtype)
+        
         new_pos_embed = new_pos_embed.permute(0, 2, 3, 1)
         return new_pos_embed
     else:
