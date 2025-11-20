@@ -40,6 +40,7 @@ from vllm.model_executor.models.utils import (AutoWeightsLoader, WeightsMapper, 
 from deepencoder.sam_vary_sdpa import build_sam_vit_b
 from deepencoder.clip_sdpa import build_clip_l
 from deepencoder.build_linear import MlpProjector
+from deepencoder.cross_attention_vision import VisionTokenCompressor
 from addict import Dict
 # import time
 from config import IMAGE_SIZE, BASE_SIZE, CROP_MODE, PRINT_NUM_VIS_TOKENS, PROMPT
@@ -63,47 +64,9 @@ class DeepseekOCRProcessingInfo(BaseProcessingInfo):
                              image_width: int,
                              image_height: int,
                              cropping: bool = True) -> int:
-        hf_processor = self.get_hf_processor()
-
-
-        # image_size = hf_processor.image_size
-        # patch_size = hf_processor.patch_size
-        # downsample_ratio = hf_processor.downsample_ratio
-
-        image_size = IMAGE_SIZE
-        base_size = BASE_SIZE
-        patch_size = 16
-        downsample_ratio = 4
-
-        if CROP_MODE:
-            if image_width <= 640 and image_height <= 640:
-                crop_ratio = [1, 1]
-            else:
-                # images_crop_raw, crop_ratio = hf_processor.dynamic_preprocess(image)
-
-                # find the closest aspect ratio to the target
-                crop_ratio = count_tiles(image_width, image_height, image_size=IMAGE_SIZE)
-
-                # print('===========')
-                # print('crop_ratio ', crop_ratio)
-                # print('============')
-                
-            num_width_tiles, num_height_tiles = crop_ratio
-        else:
-            num_width_tiles = num_height_tiles = 1
-
-        h = w = math.ceil((base_size // patch_size) / downsample_ratio)
-
-        h2 = w2 = math.ceil((image_size // patch_size) / downsample_ratio)
-
-        global_views_tokens = h * (w + 1)
-        if num_width_tiles >1 or num_height_tiles>1:
-            local_views_tokens = (num_height_tiles * h2) * (num_width_tiles * w2 + 1)
-        else:
-            local_views_tokens = 0
-
-
-        return global_views_tokens + local_views_tokens + 1
+        # Return fixed number of vision tokens (6 queries + 1 separator token)
+        # This makes the number of vision tokens independent of image resolution
+        return 6 + 1  # 6 compressed tokens + 1 separator
 
     def get_image_size_with_most_features(self) -> ImageSize:
 
@@ -290,6 +253,7 @@ class DeepseekOCRForCausalLM(nn.Module, SupportsMultiModal, SupportsPP):
 
         n_embed = 1280
         self.projector =  MlpProjector(Dict(projector_type="linear", input_dim=2048, n_embed=n_embed))
+        self.vision_compressor = VisionTokenCompressor(embed_dim=n_embed, num_queries=6)
         self.tile_tag = config.tile_tag
         self.global_view_pos = config.global_view_pos
     
@@ -367,6 +331,9 @@ class DeepseekOCRForCausalLM(nn.Module, SupportsMultiModal, SupportsPP):
         images_crop: torch.Tensor,
         images_spatial_crop: torch.Tensor,
     ) -> NestedTensors:
+        """
+        Modified to use cross-attention for fixed number of vision tokens.
+        """
 
         # Pixel_values (global view): [n_image, batch_size, 3, height, width]
         # images_spatial_crop: [n_image, batch_size, [num_tiles_w, num_tiles_h]]
@@ -389,53 +356,31 @@ class DeepseekOCRForCausalLM(nn.Module, SupportsMultiModal, SupportsPP):
                 crop_shape = images_spatial_crop[jdx][0]
 
                 if torch.sum(patches).item() != 0:  # if all values = 0, no crop
-                    # P, C, H, W = patches.shape
-                    # crop_flag = 1
-                    local_features_1 = self.sam_model(patches)
-                    #TODO del patches 
-                    # torch.compiler.cudagraph_mark_step_begin()
-                    local_features_2 = self.vision_model(patches, local_features_1)  
+                    # Extract features from local patches
+                    local_sam_features = self.sam_model(patches)
+                    local_clip_features = self.vision_model(patches, local_sam_features)
 
+                    # Extract features from global image
+                    global_sam_features = self.sam_model(image_ori)
+                    global_clip_features = self.vision_model(image_ori, global_sam_features)
 
-                    local_features = torch.cat((local_features_2[:, 1:], local_features_1.flatten(2).permute(0, 2, 1)), dim=-1) 
-                    local_features = self.projector(local_features)
+                    # Concatenate all features (local + global) for cross-attention
+                    all_sam_features = torch.cat([local_sam_features, global_sam_features], dim=0)
+                    all_clip_features = torch.cat([local_clip_features, global_clip_features], dim=0)
 
+                    # Use cross-attention to compress to fixed 6 tokens
+                    compressed_tokens = self.vision_compressor(all_sam_features, all_clip_features)
 
-                    global_features_1 = self.sam_model(image_ori)
-                    global_features_2 = self.vision_model(image_ori, global_features_1) 
-                    global_features = torch.cat((global_features_2[:, 1:], global_features_1.flatten(2).permute(0, 2, 1)), dim=-1) 
-                    global_features = self.projector(global_features)
+                    # Flatten to sequence format
+                    compressed_tokens = compressed_tokens.view(-1, n_embed)  # [6, n_embed]
 
                     if PRINT_NUM_VIS_TOKENS:
                         print('=====================')
-                        print('BASE: ', global_features.shape)
-                        print('PATCHES: ', local_features.shape)
+                        print('COMPRESSED TOKENS: ', compressed_tokens.shape)
                         print('=====================')
 
-                    _, hw, n_dim = global_features.shape
-                    h = w = int(hw ** 0.5)
-
-                    _2, hw2, n_dim2 = local_features.shape
-                    h2 = w2 = int(hw2 ** 0.5)
-
-                    width_crop_num, height_crop_num = crop_shape[0], crop_shape[1]
-
-                    global_features = global_features.view(h, w, n_dim)
-
-                    global_features = torch.cat(
-                        [global_features, self.image_newline[None, None, :].expand(h, 1, n_dim)], dim=1
-                    )
-
-                    global_features = global_features.view(-1, n_dim)
-
-
-                    local_features = local_features.view(height_crop_num, width_crop_num, h2, w2, n_dim2).permute(0, 2, 1, 3, 4).reshape(height_crop_num*h2, width_crop_num*w2, n_dim2)
-                    local_features = torch.cat(
-                        [local_features, self.image_newline[None, None, :].expand(height_crop_num * h2, 1, n_dim2)], dim=1
-                    )
-                    local_features = local_features.view(-1, n_dim2)
-
-                    global_local_features = torch.cat([local_features, global_features, self.view_seperator[None, :]], dim=0)
+                    # Add separator token
+                    global_local_features = torch.cat([compressed_tokens, self.view_seperator[None, :]], dim=0)
                 
                 else:
                     global_features_1 = self.sam_model(image_ori)
