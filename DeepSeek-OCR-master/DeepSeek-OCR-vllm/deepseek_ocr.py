@@ -40,9 +40,12 @@ from vllm.model_executor.models.utils import (AutoWeightsLoader, WeightsMapper, 
 from deepencoder.sam_vary_sdpa import build_sam_vit_b
 from deepencoder.clip_sdpa import build_clip_l
 from deepencoder.build_linear import MlpProjector
+from deepencoder.query_compressor import build_query_compressor
 from addict import Dict
 # import time
-from config import IMAGE_SIZE, BASE_SIZE, CROP_MODE, PRINT_NUM_VIS_TOKENS, PROMPT
+from config import (IMAGE_SIZE, BASE_SIZE, CROP_MODE, PRINT_NUM_VIS_TOKENS, PROMPT,
+                    USE_QUERY_COMPRESSION, NUM_QUERIES, NUM_CROSS_ATTN_LAYERS,
+                    NUM_QUERY_HEADS, QUERY_MLP_RATIO, QUERY_DROPOUT, USE_FLASH_ATTN_QUERY)
 # The image token id may be various
 _IMAGE_TOKEN = "<image>"
 
@@ -65,6 +68,9 @@ class DeepseekOCRProcessingInfo(BaseProcessingInfo):
                              cropping: bool = True) -> int:
         hf_processor = self.get_hf_processor()
 
+        # If query-based compression is enabled, return fixed number of tokens
+        if USE_QUERY_COMPRESSION:
+            return NUM_QUERIES + 1  # +1 for separator token
 
         # image_size = hf_processor.image_size
         # patch_size = hf_processor.patch_size
@@ -293,6 +299,22 @@ class DeepseekOCRForCausalLM(nn.Module, SupportsMultiModal, SupportsPP):
         self.tile_tag = config.tile_tag
         self.global_view_pos = config.global_view_pos
     
+        # Initialize query-based compressor if enabled (GitHub Issue #271)
+        self.use_query_compression = USE_QUERY_COMPRESSION
+        if self.use_query_compression:
+            self.query_compressor = build_query_compressor(
+                num_queries=NUM_QUERIES,
+                hidden_dim=n_embed,
+                num_layers=NUM_CROSS_ATTN_LAYERS,
+                num_heads=NUM_QUERY_HEADS,
+                mlp_ratio=QUERY_MLP_RATIO,
+                dropout=QUERY_DROPOUT,
+                use_flash_attn=USE_FLASH_ATTN_QUERY,
+            )
+            print(f"✅ Query-based compression enabled: {NUM_QUERIES} fixed tokens with {NUM_CROSS_ATTN_LAYERS} layers")
+        else:
+            self.query_compressor = None
+    
         # self.sam_model = torch.compile(self.sam_model, mode="reduce-overhead")
         # self.vision_model = torch.compile(self.vision_model, mode="reduce-overhead")
         # self.projector = torch.compile(self.projector, mode="max-autotune")
@@ -461,6 +483,25 @@ class DeepseekOCRForCausalLM(nn.Module, SupportsMultiModal, SupportsPP):
                     global_features = global_features.view(-1, n_dim)
 
                     global_local_features = torch.cat([global_features, self.view_seperator[None, :]], dim=0)
+
+                # Apply query-based compression if enabled (GitHub Issue #271)
+                if self.use_query_compression and self.query_compressor is not None:
+                    # global_local_features shape: [N, C] where N varies by resolution
+                    # Add batch dimension for query compressor
+                    features_with_batch = global_local_features.unsqueeze(0)  # [1, N, C]
+                    
+                    # Apply query compressor to get fixed number of tokens
+                    compressed_features = self.query_compressor(features_with_batch)  # [1, num_queries, C]
+                    
+                    # Remove batch dimension and add separator
+                    compressed_features = compressed_features.squeeze(0)  # [num_queries, C]
+                    global_local_features = torch.cat([compressed_features, self.view_seperator[None, :]], dim=0)
+                    
+                    if PRINT_NUM_VIS_TOKENS:
+                        print('=====================')
+                        print('QUERY COMPRESSED: ', compressed_features.shape)
+                        print('FIXED TOKENS: ', NUM_QUERIES)
+                        print('=====================')
 
                 images_in_this_batch.append(global_local_features)
 

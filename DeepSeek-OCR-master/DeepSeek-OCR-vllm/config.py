@@ -16,6 +16,34 @@ PRINT_NUM_VIS_TOKENS = False
 SKIP_REPEAT = True
 MODEL_PATH = 'deepseek-ai/DeepSeek-OCR' # change to your model path
 
+# ============================================================================
+# Query-Based Compression Settings (GitHub Issue #271)
+# ============================================================================
+# Enable DETR-style query-based compression for fixed-size vision tokens
+USE_QUERY_COMPRESSION = False  # Set to True to enable query-based compression
+
+# Number of learnable queries (output tokens will be fixed to this number)
+# Recommended values: 64, 128, 256
+# Lower values = more compression, higher values = more detail retention
+NUM_QUERIES = 128
+
+# Number of cross-attention layers in the query compressor
+# Default: 6 (as suggested in DETR and the GitHub issue)
+# More layers = better feature extraction but slower inference
+NUM_CROSS_ATTN_LAYERS = 6
+
+# Number of attention heads in the query compressor
+NUM_QUERY_HEADS = 16
+
+# MLP expansion ratio in the query compressor
+QUERY_MLP_RATIO = 4.0
+
+# Dropout rate for query compressor (0.0 for inference)
+QUERY_DROPOUT = 0.0
+
+# Whether to use flash attention in query compressor
+USE_FLASH_ATTN_QUERY = True
+
 # TODO: change INPUT_PATH
 # .pdf: run_dpsk_ocr_pdf.py; 
 # .jpg, .png, .jpeg: run_dpsk_ocr_image.py; 
