@@ -77,13 +77,66 @@ conda activate deepseek-ocr
 ```
 3. Packages
 
-- download the vllm-0.8.5 [whl](https://github.com/vllm-project/vllm/releases/tag/v0.8.5) 
+### CUDA 11.8 Installation
+- download the vllm-0.8.5 [whl](https://github.com/vllm-project/vllm/releases/tag/v0.8.5)
 ```Shell
 pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu118
 pip install vllm-0.8.5+cu118-cp38-abi3-manylinux1_x86_64.whl
 pip install -r requirements.txt
 pip install flash-attn==2.7.3 --no-build-isolation
 ```
+
+### CUDA 12.8 Installation (for RTX 5090 and newer GPUs)
+For CUDA 12.8 compatibility, follow these specific installation steps:
+
+1. Install Core vLLM, Flash Attention & xformers
+```bash
+# Install the compatible xformers nightly
+pip install xformers==0.0.33.dev20251104+cu128 --extra-index-url https://download.pytorch.org/whl/nightly/cu128
+
+# Download the pre-built wheels
+wget https://github.com/ghcdmm/DeepSeek-OCR/releases/download/1/flash_attn-2.8.3-cp312-cp312-linux_x86_64.whl
+wget https://github.com/ghcdmm/DeepSeek-OCR/releases/download/1/vllm-0.8.5+cu128-cp312-cp312-linux_x86_64.whl
+
+# Install the wheels (flags are important!)
+pip install ./flash_attn-2.8.3-cp312-cp312-linux_x86_64.whl
+pip install ./vllm-0.8.5+cu128-cp312-cp312-linux_x86_64.whl --no-build-isolation --no-deps
+```
+
+2. Install Initial Dependencies
+```bash
+pip install pydantic
+pip install transformers
+pip install cachetools
+pip install cloudpickle
+pip install psutil
+pip install zmq
+pip install msgspec
+pip install blake3
+```
+
+3. The Critical torchvision Fix
+```bash
+# Install torchvision nightly that matches your PyTorch version
+pip install torchvision --index-url https://download.pytorch.org/whl/nightly/cu128
+
+# CRITICAL: Re-install xformers to fix the environment conflict
+pip install xformers==0.0.33.dev20251104+cu128 --extra-index-url https://download.pytorch.org/whl/nightly/cu128
+```
+
+4. Final Dependencies
+```bash
+pip install hf_transfer
+pip install prometheus_client
+# Install any other missing packages as needed
+```
+
+5. Verification
+```bash
+python -c "import vllm; print(vllm.__version__)"
+```
+Keep running the verification command and install any missing packages until it succeeds without ImportError.
+
 **Note:** if you want vLLM and transformers codes to run in the same environment, you don't need to worry about this installation error like: vllm 0.8.5+cu118 requires transformers>=4.51.1
 
 ## vLLM-Inference
