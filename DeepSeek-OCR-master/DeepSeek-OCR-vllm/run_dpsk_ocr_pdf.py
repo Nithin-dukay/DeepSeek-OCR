@@ -135,14 +135,36 @@ def re_match(text):
     return matches, mathes_image, mathes_other
 
 
+def sanitize_coordinates(coord_str):
+    """
+    Sanitize coordinate strings by removing invalid patterns.
+    
+    Handles cases like:
+    - "[[550, s 331, 652, 345]]" -> "[[550, 331, 652, 345]]"
+    - Removes letter + space patterns before numbers
+    
+    Args:
+        coord_str: The coordinate string to sanitize
+        
+    Returns:
+        Sanitized coordinate string
+    """
+    # Remove patterns like "s 331" -> "331" (letter followed by space and number)
+    # This handles tokenization artifacts from the model
+    sanitized = re.sub(r'\b[a-zA-Z]\s+(\d+)', r'\1', coord_str)
+    return sanitized
+
+
 def extract_coordinates_and_label(ref_text, image_width, image_height):
 
 
     try:
         label_type = ref_text[1]
-        cor_list = eval(ref_text[2])
+        # Sanitize the coordinate string before eval
+        coord_str = sanitize_coordinates(ref_text[2])
+        cor_list = eval(coord_str)
     except Exception as e:
-        print(e)
+        print(f"Warning: Failed to parse coordinates. Original: {ref_text[2]}, Error: {e}")
         return None
 
     return (label_type, cor_list)

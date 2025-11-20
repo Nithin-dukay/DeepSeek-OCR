@@ -1,0 +1,137 @@
+================================================================================
+                    FIX DIAGRAM - GitHub Issue #278
+================================================================================
+
+                         MODEL OUTPUT (with artifact)
+                                    |
+                                    v
+              <|ref|>text<|/ref|><|det|>[[550, s 331, 652, 345]]<|/det|>
+                                    |
+                                    v
+                            REGEX EXTRACTION
+                                    |
+                    +---------------+---------------+
+                    |                               |
+                    v                               v
+            ref_text[1] = "text"        ref_text[2] = "[[550, s 331, 652, 345]]"
+                    |                               |
+                    |                               v
+                    |                    ┌─────────────────────────┐
+                    |                    │ sanitize_coordinates()  │
+                    |                    │                         │
+                    |                    │ Regex Pattern:          │
+                    |                    │ r'\b[a-zA-Z]\s+(\d+)'  │
+                    |                    │         ↓               │
+                    |                    │ Removes: "s "           │
+                    |                    │ Keeps:   "331"          │
+                    |                    └─────────────────────────┘
+                    |                               |
+                    |                               v
+                    |                  "[[550, 331, 652, 345]]"
+                    |                               |
+                    |                               v
+                    |                          eval()
+                    |                               |
+                    +---------------+---------------+
+                                    |
+                                    v
+                    (label_type, [[550, 331, 652, 345]])
+                                    |
+                                    v
+                          BOUNDING BOX DRAWN ✓
+
+
+================================================================================
+                            TRANSFORMATION FLOW
+================================================================================
+
+INPUT:  "[[550, s 331, 652, 345]]"
+         ↓
+REGEX:  r'\b[a-zA-Z]\s+(\d+)' matches "s 331"
+         ↓
+REPLACE: with just "\1" (the captured number group)
+         ↓
+OUTPUT: "[[550, 331, 652, 345]]"
+         ↓
+EVAL:   [[550, 331, 652, 345]]  ✓ Valid Python list
+
+
+================================================================================
+                         PATTERN MATCHING EXAMPLES
+================================================================================
+
+Pattern: r'\b[a-zA-Z]\s+(\d+)'
+         └─┬─┘ └┬┘ └┬┘ └──┬──┘
+           │    │   │     │
+           │    │   │     └─ Capture group: one or more digits
+           │    │   └─────── One or more whitespace characters
+           │    └─────────── Single letter (a-z or A-Z)
+           └──────────────── Word boundary
+
+Matches:
+  "s 331"  → captures "331"
+  "a 100"  → captures "100"
+  "x 50"   → captures "50"
+
+Does NOT match:
+  "331"    → no letter prefix
+  "s331"   → no space
+  "ss 331" → two letters (not single)
+
+
+================================================================================
+                              CODE FLOW
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────┐
+│ extract_coordinates_and_label(ref_text, width, height)         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. label_type = ref_text[1]                                   │
+│     └─> "text"                                                  │
+│                                                                 │
+│  2. coord_str = sanitize_coordinates(ref_text[2])              │
+│     Input:  "[[550, s 331, 652, 345]]"                         │
+│     Output: "[[550, 331, 652, 345]]"                           │
+│                                                                 │
+│  3. cor_list = eval(coord_str)                                 │
+│     Result: [[550, 331, 652, 345]]                             │
+│                                                                 │
+│  4. return (label_type, cor_list)                              │
+│     Result: ("text", [[550, 331, 652, 345]])                   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+
+================================================================================
+                           ERROR HANDLING
+================================================================================
+
+BEFORE:
+  try:
+      cor_list = eval(ref_text[2])  # Fails on "s 331"
+  except Exception as e:
+      print(e)  # Generic error message
+      return None
+
+AFTER:
+  try:
+      coord_str = sanitize_coordinates(ref_text[2])  # Cleans first
+      cor_list = eval(coord_str)  # Now succeeds
+  except Exception as e:
+      print(f"Warning: Failed to parse coordinates. Original: {ref_text[2]}, Error: {e}")
+      return None
+
+
+================================================================================
+                              BENEFITS
+================================================================================
+
+✓ Fixes malformed coordinates automatically
+✓ Backward compatible (valid coords unchanged)
+✓ Better error messages for debugging
+✓ Handles multiple malformed patterns
+✓ No user code changes required
+✓ Robust against model variations
+
+================================================================================
