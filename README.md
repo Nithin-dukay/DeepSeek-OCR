@@ -57,6 +57,8 @@
 
 ## Contents
 - [Install](#install)
+  - [Standard Installation (CUDA 11.8)](#standard-installation-cuda-118)
+  - [RTX 5090 / CUDA 12.8 Installation](#rtx-5090--cuda-128-installation)
 - [vLLM Inference](#vllm-inference)
 - [Transformers Inference](#transformers-inference)
   
@@ -65,6 +67,8 @@
 
 
 ## Install
+
+### Standard Installation (CUDA 11.8)
 >Our environment is cuda11.8+torch2.6.0.
 1. Clone this repository and navigate to the DeepSeek-OCR folder
 ```bash
@@ -85,6 +89,48 @@ pip install -r requirements.txt
 pip install flash-attn==2.7.3 --no-build-isolation
 ```
 **Note:** if you want vLLM and transformers codes to run in the same environment, you don't need to worry about this installation error like: vllm 0.8.5+cu118 requires transformers>=4.51.1
+
+### RTX 5090 / CUDA 12.8 Installation
+
+For users with **NVIDIA RTX 5090** GPUs running **CUDA 12.8**, we provide a specialized installation guide and automated setup script.
+
+#### Quick Setup (Automated)
+
+```bash
+# Clone the repository
+git clone https://github.com/deepseek-ai/DeepSeek-OCR.git
+cd DeepSeek-OCR
+
+# Create and activate environment
+conda create -n deepseek-ocr-rtx5090 python=3.12 -y
+conda activate deepseek-ocr-rtx5090
+
+# Run automated setup script
+bash scripts/setup_rtx5090_cuda128.sh
+
+# Verify installation
+python scripts/verify_installation.py
+```
+
+#### Manual Setup
+
+For detailed step-by-step instructions, troubleshooting, and understanding the installation process, see:
+
+📖 **[RTX 5090 / CUDA 12.8 Installation Guide](docs/INSTALL_RTX5090_CUDA128.md)**
+
+This guide covers:
+- Detailed installation steps with explanations
+- Critical dependency ordering (xformers, torchvision conflicts)
+- Common issues and solutions
+- Performance optimization tips
+
+**Key differences from standard installation:**
+- Uses PyTorch nightly builds with CUDA 12.8
+- Requires specific pre-built wheels for flash-attn and vLLM
+- Critical installation order to avoid dependency conflicts
+- Special handling of torchvision/xformers compatibility
+
+**Credits:** This installation method is based on the community solution from [Issue #240](https://github.com/deepseek-ai/DeepSeek-OCR/issues/240).
 
 ## vLLM-Inference
 - VLLM:
