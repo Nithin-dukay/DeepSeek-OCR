@@ -6,7 +6,8 @@ import torch
 if torch.version.cuda == '11.8':
     os.environ["TRITON_PTXAS_PATH"] = "/usr/local/cuda-11.8/bin/ptxas"
 
-os.environ['VLLM_USE_V1'] = '0'
+# Enable vLLM v1 engine for compatibility with vLLM 0.11.0+
+os.environ['VLLM_USE_V1'] = '1'
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
 from vllm import AsyncLLMEngine, SamplingParams
@@ -146,7 +147,7 @@ def process_image_with_refs(image, ref_texts):
 
 async def stream_generate(image=None, prompt=''):
 
-
+    # Initialize engine with v1-compatible logits processor
     engine_args = AsyncEngineArgs(
         model=MODEL_PATH,
         hf_overrides={"architectures": ["DeepseekOCRForCausalLM"]},
@@ -156,28 +157,40 @@ async def stream_generate(image=None, prompt=''):
         trust_remote_code=True,  
         tensor_parallel_size=1,
         gpu_memory_utilization=0.75,
+        # Register v1-compatible logits processor adapter
+        logits_processors=["process.ngram_norepeat_v1_adapter:NoRepeatNGramAdaptor"],
     )
     engine = AsyncLLMEngine.from_engine_args(engine_args)
     
-    logits_processors = [NoRepeatNGramLogitsProcessor(ngram_size=30, window_size=90, whitelist_token_ids= {128821, 128822})] #whitelist: <td>, </td> 
-
+    # CRITICAL: Process image AFTER engine initialization for v1 compatibility
+    if image is not None and '<image>' in prompt:
+        image_features = DeepseekOCRProcessor().tokenize_with_images(
+            images=[image], bos=True, eos=True, cropping=CROP_MODE
+        )
+    else:
+        image_features = None
+    
+    # For v1 engine, pass n-gram parameters via extra_args in SamplingParams
     sampling_params = SamplingParams(
         temperature=0.0,
         max_tokens=8192,
-        logits_processors=logits_processors,
         skip_special_tokens=False,
-        # ignore_eos=False,
-        
+        # N-gram parameters for v1 logits processor
+        extra_args={
+            "ngram_size": 30,
+            "window_size": 90,
+            "whitelist_token_ids": {128821, 128822}  # whitelist: <td>, </td>
+        }
     )
     
     request_id = f"request-{int(time.time())}"
 
     printed_length = 0  
 
-    if image and '<image>' in prompt:
+    if image_features and '<image>' in prompt:
         request = {
             "prompt": prompt,
-            "multi_modal_data": {"image": image}
+            "multi_modal_data": {"image": image_features}
         }
     elif prompt:
         request = {
@@ -208,16 +221,17 @@ if __name__ == "__main__":
 
     image = load_image(INPUT_PATH).convert('RGB')
 
+    # IMPORTANT: For v1 engine, process image AFTER engine initialization
+    # The processor will be called inside stream_generate after engine is ready
+    # We pass the raw image instead of pre-processed features
     
-    if '<image>' in PROMPT:
-
-        image_features = DeepseekOCRProcessor().tokenize_with_images(images = [image], bos=True, eos=True, cropping=CROP_MODE)
-    else:
-        image_features = ''
-
     prompt = PROMPT
 
-    result_out = asyncio.run(stream_generate(image_features, prompt))
+    # Pass raw image to stream_generate, which will process it after engine init
+    if '<image>' in PROMPT:
+        result_out = asyncio.run(stream_generate(image, prompt))
+    else:
+        result_out = asyncio.run(stream_generate(None, prompt))
 
 
     save_results = 1
