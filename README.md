@@ -57,6 +57,8 @@
 
 ## Contents
 - [Install](#install)
+  - [CUDA 11.8 Installation](#cuda-118-installation)
+  - [CUDA 12.8 Installation (RTX 5090)](#cuda-128-installation-rtx-5090)
 - [vLLM Inference](#vllm-inference)
 - [Transformers Inference](#transformers-inference)
   
@@ -65,6 +67,8 @@
 
 
 ## Install
+
+### CUDA 11.8 Installation
 >Our environment is cuda11.8+torch2.6.0.
 1. Clone this repository and navigate to the DeepSeek-OCR folder
 ```bash
@@ -85,6 +89,31 @@ pip install -r requirements.txt
 pip install flash-attn==2.7.3 --no-build-isolation
 ```
 **Note:** if you want vLLM and transformers codes to run in the same environment, you don't need to worry about this installation error like: vllm 0.8.5+cu118 requires transformers>=4.51.1
+
+### CUDA 12.8 Installation (RTX 5090)
+
+For systems with **CUDA 12.8** (e.g., NVIDIA RTX 5090), please follow our dedicated installation guide:
+
+📖 **[CUDA 12.8 Installation Guide](INSTALL_CUDA_12.8.md)**
+
+**Quick Start:**
+```bash
+# Automated installation
+chmod +x install_cuda128.sh
+./install_cuda128.sh
+
+# Verify installation
+python verify_installation.py
+```
+
+This installation process handles the complex dependency ordering required for CUDA 12.8, including:
+- Pre-built wheels for vLLM and flash-attn
+- Critical xformers and torchvision compatibility fixes
+- Automatic missing dependency resolution
+
+For detailed manual installation steps and troubleshooting, see [INSTALL_CUDA_12.8.md](INSTALL_CUDA_12.8.md).
+
+**Credits:** Installation guide based on [Issue #240](https://github.com/deepseek-ai/DeepSeek-OCR/issues/240) - thanks to the community for solving this!
 
 ## vLLM-Inference
 - VLLM:
