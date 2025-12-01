@@ -6,6 +6,8 @@ import re
 from tqdm import tqdm
 import torch
 from concurrent.futures import ThreadPoolExecutor
+import gc
+import psutil
  
 
 if torch.version.cuda == '11.8':
@@ -14,7 +16,9 @@ os.environ['VLLM_USE_V1'] = '0'
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
 
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, SKIP_REPEAT, MAX_CONCURRENCY, NUM_WORKERS, CROP_MODE
+from config import (MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, SKIP_REPEAT, 
+                    MAX_CONCURRENCY, NUM_WORKERS, CROP_MODE, PDF_BATCH_SIZE, 
+                    INFERENCE_BATCH_SIZE, ENABLE_MEMORY_MONITORING, MEMORY_CLEANUP_FREQUENCY)
 
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
@@ -61,38 +65,87 @@ class Colors:
     BLUE = '\033[34m'
     RESET = '\033[0m' 
 
-def pdf_to_images_high_quality(pdf_path, dpi=144, image_format="PNG"):
+def get_memory_usage():
+    """Get current memory usage in GB"""
+    if ENABLE_MEMORY_MONITORING:
+        process = psutil.Process(os.getpid())
+        mem_info = process.memory_info()
+        mem_gb = mem_info.rss / (1024 ** 3)
+        
+        if torch.cuda.is_available():
+            gpu_mem_allocated = torch.cuda.memory_allocated() / (1024 ** 3)
+            gpu_mem_reserved = torch.cuda.memory_reserved() / (1024 ** 3)
+            return mem_gb, gpu_mem_allocated, gpu_mem_reserved
+        return mem_gb, 0, 0
+    return 0, 0, 0
+
+def cleanup_memory():
+    """Force garbage collection and clear CUDA cache"""
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        torch.cuda.synchronize()
+
+def pdf_to_images_chunked(pdf_path, dpi=144, image_format="PNG", batch_size=PDF_BATCH_SIZE):
     """
-    pdf2images
+    Convert PDF to images in chunks to avoid memory overflow
+    Yields batches of images instead of loading all at once
     """
-    images = []
-    
     pdf_document = fitz.open(pdf_path)
+    total_pages = pdf_document.page_count
     
     zoom = dpi / 72.0
     matrix = fitz.Matrix(zoom, zoom)
     
-    for page_num in range(pdf_document.page_count):
-        page = pdf_document[page_num]
-
-        pixmap = page.get_pixmap(matrix=matrix, alpha=False)
-        Image.MAX_IMAGE_PIXELS = None
-
-        if image_format.upper() == "PNG":
-            img_data = pixmap.tobytes("png")
-            img = Image.open(io.BytesIO(img_data))
-        else:
-            img_data = pixmap.tobytes("png")
-            img = Image.open(io.BytesIO(img_data))
-            if img.mode in ('RGBA', 'LA'):
-                background = Image.new('RGB', img.size, (255, 255, 255))
-                background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
-                img = background
+    print(f'{Colors.YELLOW}Total pages: {total_pages}, processing in batches of {batch_size}{Colors.RESET}')
+    
+    for start_idx in range(0, total_pages, batch_size):
+        end_idx = min(start_idx + batch_size, total_pages)
+        images_batch = []
         
-        images.append(img)
+        if ENABLE_MEMORY_MONITORING:
+            mem_gb, gpu_alloc, gpu_res = get_memory_usage()
+            print(f'{Colors.BLUE}Processing pages {start_idx+1}-{end_idx} | RAM: {mem_gb:.2f}GB | GPU Alloc: {gpu_alloc:.2f}GB | GPU Reserved: {gpu_res:.2f}GB{Colors.RESET}')
+        
+        for page_num in range(start_idx, end_idx):
+            page = pdf_document[page_num]
+            pixmap = page.get_pixmap(matrix=matrix, alpha=False)
+            Image.MAX_IMAGE_PIXELS = None
+
+            if image_format.upper() == "PNG":
+                img_data = pixmap.tobytes("png")
+                img = Image.open(io.BytesIO(img_data))
+            else:
+                img_data = pixmap.tobytes("png")
+                img = Image.open(io.BytesIO(img_data))
+                if img.mode in ('RGBA', 'LA'):
+                    background = Image.new('RGB', img.size, (255, 255, 255))
+                    background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                    img = background
+            
+            images_batch.append(img)
+            
+            # Explicitly delete pixmap to free memory
+            del pixmap
+            del img_data
+        
+        yield images_batch, start_idx, end_idx
+        
+        # Clean up after each batch
+        del images_batch
+        cleanup_memory()
     
     pdf_document.close()
-    return images
+
+def pdf_to_images_high_quality(pdf_path, dpi=144, image_format="PNG"):
+    """
+    Legacy function - now uses chunked processing internally
+    Returns all images (for backward compatibility with small PDFs)
+    """
+    all_images = []
+    for images_batch, _, _ in pdf_to_images_chunked(pdf_path, dpi, image_format):
+        all_images.extend(images_batch)
+    return all_images
 
 def pil_to_pdf_img2pdf(pil_images, output_path):
 
@@ -229,102 +282,141 @@ def process_single_image(image):
     }
     return cache_item
 
+def process_images_in_batches(images, batch_size=INFERENCE_BATCH_SIZE):
+    """
+    Process images in smaller batches for inference
+    Yields batches of processed inputs
+    """
+    total_images = len(images)
+    print(f'{Colors.YELLOW}Processing {total_images} images in inference batches of {batch_size}{Colors.RESET}')
+    
+    for start_idx in range(0, total_images, batch_size):
+        end_idx = min(start_idx + batch_size, total_images)
+        batch_images = images[start_idx:end_idx]
+        
+        # Process batch with thread pool
+        with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
+            batch_inputs = list(tqdm(
+                executor.map(process_single_image, batch_images),
+                total=len(batch_images),
+                desc=f"Pre-processing batch {start_idx//batch_size + 1}"
+            ))
+        
+        yield batch_inputs, start_idx, end_idx
+        
+        # Clean up
+        del batch_inputs
+        del batch_images
+
 
 if __name__ == "__main__":
 
     os.makedirs(OUTPUT_PATH, exist_ok=True)
     os.makedirs(f'{OUTPUT_PATH}/images', exist_ok=True)
     
-    print(f'{Colors.RED}PDF loading .....{Colors.RESET}')
-
-
-    images = pdf_to_images_high_quality(INPUT_PATH)
-
+    print(f'{Colors.RED}PDF loading and processing with memory optimization.....{Colors.RESET}')
+    
+    if ENABLE_MEMORY_MONITORING:
+        mem_gb, gpu_alloc, gpu_res = get_memory_usage()
+        print(f'{Colors.BLUE}Initial Memory - RAM: {mem_gb:.2f}GB | GPU Alloc: {gpu_alloc:.2f}GB | GPU Reserved: {gpu_res:.2f}GB{Colors.RESET}')
 
     prompt = PROMPT
-
-    # batch_inputs = []
-
-    with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:  
-        batch_inputs = list(tqdm(
-            executor.map(process_single_image, images),
-            total=len(images),
-            desc="Pre-processed images"
-        ))
-
-
-    # for image in tqdm(images):
-
-    #     prompt_in = prompt
-    #     cache_list = [
-    #         {
-    #             "prompt": prompt_in,
-    #             "multi_modal_data": {"image": DeepseekOCRProcessor().tokenize_with_images(images = [image], bos=True, eos=True, cropping=CROP_MODE)},
-    #         }
-    #     ]
-    #     batch_inputs.extend(cache_list)
-
-
-    outputs_list = llm.generate(
-        batch_inputs,
-        sampling_params=sampling_params
-    )
-
-
+    
     output_path = OUTPUT_PATH
-
     os.makedirs(output_path, exist_ok=True)
-
-
+    
     mmd_det_path = output_path + '/' + INPUT_PATH.split('/')[-1].replace('.pdf', '_det.mmd')
     mmd_path = output_path + '/' + INPUT_PATH.split('/')[-1].replace('pdf', 'mmd')
     pdf_out_path = output_path + '/' + INPUT_PATH.split('/')[-1].replace('.pdf', '_layouts.pdf')
+    
     contents_det = ''
     contents = ''
     draw_images = []
     jdx = 0
-    for output, img in zip(outputs_list, images):
-        content = output.outputs[0].text
-
-        if '<｜end▁of▁sentence｜>' in content: # repeat no eos
-            content = content.replace('<｜end▁of▁sentence｜>', '')
-        else:
-            if SKIP_REPEAT:
-                continue
-
+    batch_counter = 0
+    
+    # Process PDF in chunks
+    for images_batch, pdf_start_idx, pdf_end_idx in pdf_to_images_chunked(INPUT_PATH):
+        print(f'{Colors.GREEN}Processing PDF pages {pdf_start_idx+1}-{pdf_end_idx}{Colors.RESET}')
         
-        page_num = f'\n<--- Page Split --->'
+        # Process images in inference batches
+        for batch_inputs, inf_start_idx, inf_end_idx in process_images_in_batches(images_batch, INFERENCE_BATCH_SIZE):
+            
+            if ENABLE_MEMORY_MONITORING:
+                mem_gb, gpu_alloc, gpu_res = get_memory_usage()
+                print(f'{Colors.BLUE}Before inference - RAM: {mem_gb:.2f}GB | GPU Alloc: {gpu_alloc:.2f}GB | GPU Reserved: {gpu_res:.2f}GB{Colors.RESET}')
+            
+            # Run inference on batch
+            outputs_list = llm.generate(
+                batch_inputs,
+                sampling_params=sampling_params
+            )
+            
+            # Process outputs immediately
+            batch_images = images_batch[inf_start_idx:inf_end_idx]
+            for output, img in zip(outputs_list, batch_images):
+                content = output.outputs[0].text
 
-        contents_det += content + f'\n{page_num}\n'
+                if '<｜end▁of▁sentence｜>' in content:  # repeat no eos
+                    content = content.replace('<｜end▁of▁sentence｜>', '')
+                else:
+                    if SKIP_REPEAT:
+                        jdx += 1
+                        continue
 
-        image_draw = img.copy()
+                page_num = f'\n<--- Page Split --->'
+                contents_det += content + f'\n{page_num}\n'
 
-        matches_ref, matches_images, mathes_other = re_match(content)
-        # print(matches_ref)
-        result_image = process_image_with_refs(image_draw, matches_ref, jdx)
+                image_draw = img.copy()
+                matches_ref, matches_images, mathes_other = re_match(content)
+                result_image = process_image_with_refs(image_draw, matches_ref, jdx)
+                draw_images.append(result_image)
 
+                for idx, a_match_image in enumerate(matches_images):
+                    content = content.replace(a_match_image, f'![](images/' + str(jdx) + '_' + str(idx) + '.jpg)\n')
 
-        draw_images.append(result_image)
+                for idx, a_match_other in enumerate(mathes_other):
+                    content = content.replace(a_match_other, '').replace('\\coloneqq', ':=').replace('\\eqqcolon', '=:').replace('\n\n\n\n', '\n\n').replace('\n\n\n', '\n\n')
 
-
-        for idx, a_match_image in enumerate(matches_images):
-            content = content.replace(a_match_image, f'![](images/' + str(jdx) + '_' + str(idx) + '.jpg)\n')
-
-        for idx, a_match_other in enumerate(mathes_other):
-            content = content.replace(a_match_other, '').replace('\\coloneqq', ':=').replace('\\eqqcolon', '=:').replace('\n\n\n\n', '\n\n').replace('\n\n\n', '\n\n')
-
-
-        contents += content + f'\n{page_num}\n'
-
-
-        jdx += 1
-
+                contents += content + f'\n{page_num}\n'
+                jdx += 1
+                
+                # Clean up image references
+                del image_draw
+            
+            # Clean up batch
+            del outputs_list
+            del batch_inputs
+            del batch_images
+            
+            batch_counter += 1
+            
+            # Periodic memory cleanup
+            if batch_counter % MEMORY_CLEANUP_FREQUENCY == 0:
+                print(f'{Colors.YELLOW}Running periodic memory cleanup...{Colors.RESET}')
+                cleanup_memory()
+                
+                if ENABLE_MEMORY_MONITORING:
+                    mem_gb, gpu_alloc, gpu_res = get_memory_usage()
+                    print(f'{Colors.BLUE}After cleanup - RAM: {mem_gb:.2f}GB | GPU Alloc: {gpu_alloc:.2f}GB | GPU Reserved: {gpu_res:.2f}GB{Colors.RESET}')
+        
+        # Clean up PDF batch
+        del images_batch
+        cleanup_memory()
+    
+    print(f'{Colors.GREEN}All pages processed. Writing output files...{Colors.RESET}')
+    
     with open(mmd_det_path, 'w', encoding='utf-8') as afile:
         afile.write(contents_det)
 
     with open(mmd_path, 'w', encoding='utf-8') as afile:
         afile.write(contents)
 
-
     pil_to_pdf_img2pdf(draw_images, pdf_out_path)
+    
+    print(f'{Colors.GREEN}Processing complete!{Colors.RESET}')
+    
+    if ENABLE_MEMORY_MONITORING:
+        mem_gb, gpu_alloc, gpu_res = get_memory_usage()
+        print(f'{Colors.BLUE}Final Memory - RAM: {mem_gb:.2f}GB | GPU Alloc: {gpu_alloc:.2f}GB | GPU Reserved: {gpu_res:.2f}GB{Colors.RESET}')
 

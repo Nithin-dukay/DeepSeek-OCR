@@ -16,6 +16,12 @@ PRINT_NUM_VIS_TOKENS = False
 SKIP_REPEAT = True
 MODEL_PATH = 'deepseek-ai/DeepSeek-OCR' # change to your model path
 
+# Memory management settings for large PDF processing
+PDF_BATCH_SIZE = 50  # Process PDF in chunks of N pages to avoid memory overflow
+INFERENCE_BATCH_SIZE = 20  # Process inference in batches of N images
+ENABLE_MEMORY_MONITORING = True  # Enable memory usage monitoring and warnings
+MEMORY_CLEANUP_FREQUENCY = 10  # Run garbage collection every N batches
+
 # TODO: change INPUT_PATH
 # .pdf: run_dpsk_ocr_pdf.py; 
 # .jpg, .png, .jpeg: run_dpsk_ocr_image.py; 

@@ -80,6 +80,10 @@ def dynamic_preprocess(image, min_num=MIN_CROPS, max_num=MAX_CROPS, image_size=6
     if use_thumbnail and len(processed_images) != 1:
         thumbnail_img = image.resize((image_size, image_size))
         processed_images.append(thumbnail_img)
+    
+    # Explicitly delete intermediate image to free memory
+    del resized_img
+    
     return processed_images, target_aspect_ratio
 
 
@@ -405,6 +409,9 @@ class DeepseekOCRProcessor(ProcessorMixin):
                 #             self.image_transform(local_view.crop((j, i, j + self.image_size, i + self.image_size))))
                 for i in range(len(images_crop_raw)):
                     images_crop_list.append(self.image_transform(images_crop_raw[i]))
+                
+                # Clean up intermediate crop images
+                del images_crop_raw
 
             # """process the global view"""
             # global_view = ImageOps.pad(image, (self.image_size, self.image_size),
