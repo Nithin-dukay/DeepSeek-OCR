@@ -14,7 +14,7 @@ os.environ['VLLM_USE_V1'] = '0'
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
 
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, SKIP_REPEAT, MAX_CONCURRENCY, NUM_WORKERS, CROP_MODE
+from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, SKIP_REPEAT, MAX_CONCURRENCY, NUM_WORKERS, CROP_MODE, BATCH_SIZE
 
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
@@ -61,18 +61,21 @@ class Colors:
     BLUE = '\033[34m'
     RESET = '\033[0m' 
 
-def pdf_to_images_high_quality(pdf_path, dpi=144, image_format="PNG"):
+def pdf_to_images_high_quality(pdf_path, dpi=144, image_format="PNG", start_page=0, end_page=None):
     """
     pdf2images
     """
     images = []
-    
+
     pdf_document = fitz.open(pdf_path)
-    
+
+    if end_page is None:
+        end_page = pdf_document.page_count
+
     zoom = dpi / 72.0
     matrix = fitz.Matrix(zoom, zoom)
-    
-    for page_num in range(pdf_document.page_count):
+
+    for page_num in range(start_page, min(end_page, pdf_document.page_count)):
         page = pdf_document[page_num]
 
         pixmap = page.get_pixmap(matrix=matrix, alpha=False)
@@ -88,9 +91,9 @@ def pdf_to_images_high_quality(pdf_path, dpi=144, image_format="PNG"):
                 background = Image.new('RGB', img.size, (255, 255, 255))
                 background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
                 img = background
-        
+
         images.append(img)
-    
+
     pdf_document.close()
     return images
 
@@ -234,11 +237,22 @@ if __name__ == "__main__":
 
     os.makedirs(OUTPUT_PATH, exist_ok=True)
     os.makedirs(f'{OUTPUT_PATH}/images', exist_ok=True)
-    
+
     print(f'{Colors.RED}PDF loading .....{Colors.RESET}')
 
+    # Get total page count
+    pdf_document = fitz.open(INPUT_PATH)
+    total_pages = pdf_document.page_count
+    pdf_document.close()
 
-    images = pdf_to_images_high_quality(INPUT_PATH)
+    # Process in batches to avoid memory issues
+    for start_page in range(0, total_pages, BATCH_SIZE):
+        end_page = min(start_page + BATCH_SIZE, total_pages)
+
+        print(f'{Colors.BLUE}Processing pages {start_page} to {end_page-1}...{Colors.RESET}')
+
+        # Load batch of images
+        images = pdf_to_images_high_quality(INPUT_PATH, start_page=start_page, end_page=end_page)
 
 
     prompt = PROMPT
