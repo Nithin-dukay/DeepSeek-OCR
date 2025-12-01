@@ -14,7 +14,7 @@ os.environ['VLLM_USE_V1'] = '0'
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
 
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, SKIP_REPEAT, MAX_CONCURRENCY, NUM_WORKERS, CROP_MODE
+from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, SKIP_REPEAT, MAX_CONCURRENCY, NUM_WORKERS, CROP_MODE, CONVERT_LATEX_TO_MARKDOWN
 
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
@@ -25,6 +25,7 @@ from vllm.model_executor.models.registry import ModelRegistry
 from vllm import LLM, SamplingParams
 from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
 from process.image_process import DeepseekOCRProcessor
+from process.latex_utils import convert_latex_to_markdown
 
 ModelRegistry.register_model("DeepseekOCRForCausalLM", DeepseekOCRForCausalLM)
 

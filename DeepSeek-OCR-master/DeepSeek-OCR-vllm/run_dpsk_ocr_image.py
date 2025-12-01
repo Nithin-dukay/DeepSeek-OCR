@@ -19,7 +19,8 @@ import numpy as np
 from tqdm import tqdm
 from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
 from process.image_process import DeepseekOCRProcessor
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, CROP_MODE
+from process.latex_utils import convert_latex_to_markdown
+from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, CROP_MODE, CONVERT_LATEX_TO_MARKDOWN
 
 
 
@@ -242,6 +243,10 @@ if __name__ == "__main__":
 
         for idx, a_match_other in enumerate(tqdm(mathes_other, desc="other")):
             outputs = outputs.replace(a_match_other, '').replace('\\coloneqq', ':=').replace('\\eqqcolon', '=:')
+        
+        # Convert LaTeX math delimiters to Markdown format
+        if CONVERT_LATEX_TO_MARKDOWN:
+            outputs = convert_latex_to_markdown(outputs)
 
         # if 'structural formula' in conversation[0]['content']:
         #     outputs = '<smiles>' + outputs + '</smiles>'

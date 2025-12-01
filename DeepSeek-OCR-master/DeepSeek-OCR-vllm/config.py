@@ -14,6 +14,7 @@ MAX_CONCURRENCY = 100 # If you have limited GPU memory, lower the concurrency co
 NUM_WORKERS = 64 # image pre-process (resize/padding) workers 
 PRINT_NUM_VIS_TOKENS = False
 SKIP_REPEAT = True
+CONVERT_LATEX_TO_MARKDOWN = True  # Convert LaTeX math delimiters \(...\) to $...$ and \[...\] to $...$
 MODEL_PATH = 'deepseek-ai/DeepSeek-OCR' # change to your model path
 
 # TODO: change INPUT_PATH
