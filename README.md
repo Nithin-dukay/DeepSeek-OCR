@@ -105,6 +105,46 @@ python run_dpsk_ocr_pdf.py
 python run_dpsk_ocr_eval_batch.py
 ```
 
+### Large PDF Processing (2800+ pages)
+
+The system now includes **automatic memory management** for processing large PDFs without crashes:
+
+#### Key Features:
+- **Chunked Processing**: Automatically processes large PDFs in batches (default: 50 pages per batch)
+- **Memory Monitoring**: Real-time GPU/CPU memory usage tracking
+- **Checkpoint/Resume**: Automatically saves progress and can resume from interruptions
+- **Aggressive Memory Cleanup**: Clears GPU cache and Python garbage between batches
+
+#### Configuration Options (in `config.py`):
+
+```python
+# Memory Management Settings
+PDF_BATCH_SIZE = 50  # Pages per batch (reduce if OOM occurs)
+ENABLE_MEMORY_MONITORING = True  # Enable memory usage logging
+MEMORY_CLEANUP_FREQUENCY = 10  # Clear memory every N pages
+CHECKPOINT_ENABLED = True  # Enable checkpoint/resume
+CHECKPOINT_DIR = './checkpoints'  # Checkpoint storage directory
+GPU_MEMORY_THRESHOLD_GB = 20.0  # Warning threshold for GPU memory
+```
+
+#### Usage Tips:
+- **For 2800+ page PDFs**: Default settings should work on g5.2xlarge (24GB VRAM)
+- **If OOM occurs**: Reduce `PDF_BATCH_SIZE` to 25 or 20
+- **Resume interrupted processing**: Simply re-run the script - it will automatically resume from the last checkpoint
+- **Monitor memory**: Set `ENABLE_MEMORY_MONITORING = True` to see detailed memory usage
+
+#### Example Output:
+```
+Total pages: 2800
+Large PDF detected. Using chunked processing with batch size: 50
+Processing pages 0 to 49 (50 pages)
+✓ Checkpoint saved: 50 pages processed
+Processing pages 50 to 99 (50 pages)
+...
+✓ Processing completed successfully!
+Peak GPU Memory: 18.45 GB
+```
+
 **[2025/10/23] The version of upstream [vLLM](https://docs.vllm.ai/projects/recipes/en/latest/DeepSeek/DeepSeek-OCR.html#installing-vllm):**
 
 ```shell

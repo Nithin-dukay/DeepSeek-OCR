@@ -16,6 +16,14 @@ PRINT_NUM_VIS_TOKENS = False
 SKIP_REPEAT = True
 MODEL_PATH = 'deepseek-ai/DeepSeek-OCR' # change to your model path
 
+# Memory Management Settings (for large PDF processing)
+PDF_BATCH_SIZE = 50  # Number of pages to process per batch (reduce if OOM occurs)
+ENABLE_MEMORY_MONITORING = True  # Enable detailed memory usage logging
+MEMORY_CLEANUP_FREQUENCY = 10  # Clear memory every N pages during preprocessing
+CHECKPOINT_ENABLED = True  # Enable checkpoint/resume for large documents
+CHECKPOINT_DIR = './checkpoints'  # Directory to store processing checkpoints
+GPU_MEMORY_THRESHOLD_GB = 20.0  # Warning threshold for GPU memory usage (in GB)
+
 # TODO: change INPUT_PATH
 # .pdf: run_dpsk_ocr_pdf.py; 
 # .jpg, .png, .jpeg: run_dpsk_ocr_image.py; 

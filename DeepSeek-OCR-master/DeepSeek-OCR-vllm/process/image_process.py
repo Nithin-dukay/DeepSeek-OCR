@@ -1,5 +1,6 @@
 import math
 from typing import List, Tuple
+import gc
 
 import torch
 import torchvision.transforms as T
@@ -80,6 +81,10 @@ def dynamic_preprocess(image, min_num=MIN_CROPS, max_num=MAX_CROPS, image_size=6
     if use_thumbnail and len(processed_images) != 1:
         thumbnail_img = image.resize((image_size, image_size))
         processed_images.append(thumbnail_img)
+    
+    # Clear intermediate image to free memory
+    del resized_img
+    
     return processed_images, target_aspect_ratio
 
 
@@ -494,7 +499,11 @@ class DeepseekOCRProcessor(ProcessorMixin):
                 images_crop = torch.zeros((1, 3, self.image_size, self.image_size)).unsqueeze(0)
 
         input_ids = input_ids.unsqueeze(0)
-
+        
+        # Clear intermediate lists to free memory
+        del images_list
+        del images_crop_list
+        gc.collect()
         
         return [[input_ids, pixel_values, images_crop, images_seq_mask, images_spatial_crop, num_image_tokens, image_shapes]]
 
