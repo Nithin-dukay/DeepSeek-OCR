@@ -14,7 +14,7 @@ os.environ['VLLM_USE_V1'] = '0'
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
 
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, SKIP_REPEAT, MAX_CONCURRENCY, NUM_WORKERS, CROP_MODE
+from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, SKIP_REPEAT, MAX_CONCURRENCY, NUM_WORKERS, CROP_MODE, ENABLE_PROMPT_VALIDATION, STRICT_PROMPT_MODE
 
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
@@ -25,6 +25,7 @@ from vllm.model_executor.models.registry import ModelRegistry
 from vllm import LLM, SamplingParams
 from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
 from process.image_process import DeepseekOCRProcessor
+from process.prompt_validator import validate_prompt
 
 ModelRegistry.register_model("DeepseekOCRForCausalLM", DeepseekOCRForCausalLM)
 
@@ -235,13 +236,27 @@ if __name__ == "__main__":
     os.makedirs(OUTPUT_PATH, exist_ok=True)
     os.makedirs(f'{OUTPUT_PATH}/images', exist_ok=True)
     
+    # Validate prompt before processing
+    prompt = PROMPT
+    if ENABLE_PROMPT_VALIDATION:
+        validation_result = validate_prompt(prompt, verbose=True)
+        
+        if STRICT_PROMPT_MODE and not validation_result.is_valid:
+            print("\n❌ ERROR: Invalid prompt detected and STRICT_PROMPT_MODE is enabled.")
+            print(f"   Current prompt: {prompt}")
+            if validation_result.suggested_prompt:
+                print(f"   Suggested prompt: {validation_result.suggested_prompt}")
+            print("\nPlease update the PROMPT in config.py or set STRICT_PROMPT_MODE=False")
+            exit(1)
+        
+        if validation_result.warning_level == 'high':
+            print("\n⚠️  Proceeding with potentially problematic prompt...")
+            print("   If you experience repetitive output, use the suggested prompt instead.\n")
+    
     print(f'{Colors.RED}PDF loading .....{Colors.RESET}')
 
 
     images = pdf_to_images_high_quality(INPUT_PATH)
-
-
-    prompt = PROMPT
 
     # batch_inputs = []
 

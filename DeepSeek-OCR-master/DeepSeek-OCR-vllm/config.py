@@ -24,17 +24,36 @@ MODEL_PATH = 'deepseek-ai/DeepSeek-OCR' # change to your model path
 INPUT_PATH = '' 
 OUTPUT_PATH = ''
 
+# Prompt validation settings
+ENABLE_PROMPT_VALIDATION = True  # Set to False to disable validation warnings
+STRICT_PROMPT_MODE = False  # Set to True to reject invalid prompts
+
+# Default prompt - using recommended format
 PROMPT = '<image>\n<|grounding|>Convert the document to markdown.'
-# PROMPT = '<image>\nFree OCR.'
-# TODO commonly used prompts
-# document: <image>\n<|grounding|>Convert the document to markdown.
-# other image: <image>\n<|grounding|>OCR this image.
-# without layouts: <image>\nFree OCR.
-# figures in document: <image>\nParse the figure.
-# general: <image>\nDescribe this image in detail.
-# rec: <image>\nLocate <|ref|>xxxx<|/ref|> in the image.
-# '先天下之忧而忧'
-# .......
+
+# RECOMMENDED PROMPTS - These formats are tested and work reliably:
+# ============================================================================
+# Document to Markdown: <image>\n<|grounding|>Convert the document to markdown.
+# General OCR:          <image>\n<|grounding|>OCR this image.
+# Free OCR (no layout): <image>\nFree OCR.
+# Figure/Chart parsing: <image>\nParse the figure.
+# General description:  <image>\nDescribe this image in detail.
+# Text location:        <image>\nLocate <|ref|>TEXT<|/ref|> in the image.
+# ============================================================================
+#
+# ⚠️  WARNING: Modifying prompts can cause repetitive or incorrect outputs!
+#
+# SAFE modifications (append to base prompt):
+#   - Output format: "... in JSON format", "... as plain text"
+#   - Focus area: "... focus on tables", "... extract text only"
+#
+# UNSAFE modifications (avoid these):
+#   - Negative instructions: "don't add spaces", "without extra lines"
+#   - Meta-instructions: "make sure to...", "always...", "never..."
+#   - Multiple sentences with complex constraints
+#
+# If you need custom behavior, start with a recommended prompt and make
+# minimal, positive additions. See PROMPT_GUIDELINES.md for details.
 
 
 from transformers import AutoTokenizer

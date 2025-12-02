@@ -51,6 +51,15 @@
 <a href="">Explore the boundaries of visual-text compression.</a>       
 </p>
 
+## ⚠️ Important: Prompt Format Sensitivity
+
+**The model is sensitive to prompt format.** Modifying standard prompts can cause repetitive or incorrect output.
+
+- ✅ **Use recommended prompts** (see [Prompts examples](#prompts-examples) section)
+- ❌ **Avoid negative instructions** like "don't add spaces", "without X"
+- 📖 **See [PROMPT_GUIDELINES.md](PROMPT_GUIDELINES.md)** for detailed guidance
+- 🔧 **Fix for Issue #288:** [ISSUE_288_FIX.md](ISSUE_288_FIX.md)
+
 ## Release
 - [2025/10/23]🚀🚀🚀 DeepSeek-OCR is now officially supported in upstream [vLLM](https://docs.vllm.ai/projects/recipes/en/latest/DeepSeek/DeepSeek-OCR.html#installing-vllm). Thanks to the [vLLM](https://github.com/vllm-project/vllm) team for their help.
 - [2025/10/20]🚀🚀🚀 We release DeepSeek-OCR, a model to investigate the role of vision encoders from an LLM-centric viewpoint.

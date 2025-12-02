@@ -19,7 +19,8 @@ import numpy as np
 from tqdm import tqdm
 from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
 from process.image_process import DeepseekOCRProcessor
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, CROP_MODE
+from process.prompt_validator import validate_prompt
+from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, CROP_MODE, ENABLE_PROMPT_VALIDATION, STRICT_PROMPT_MODE
 
 
 
@@ -206,16 +207,31 @@ if __name__ == "__main__":
     os.makedirs(OUTPUT_PATH, exist_ok=True)
     os.makedirs(f'{OUTPUT_PATH}/images', exist_ok=True)
 
+    # Validate prompt before processing
+    prompt = PROMPT
+    if ENABLE_PROMPT_VALIDATION:
+        validation_result = validate_prompt(prompt, verbose=True)
+        
+        if STRICT_PROMPT_MODE and not validation_result.is_valid:
+            print("\n❌ ERROR: Invalid prompt detected and STRICT_PROMPT_MODE is enabled.")
+            print(f"   Current prompt: {prompt}")
+            if validation_result.suggested_prompt:
+                print(f"   Suggested prompt: {validation_result.suggested_prompt}")
+            print("\nPlease update the PROMPT in config.py or set STRICT_PROMPT_MODE=False")
+            exit(1)
+        
+        if validation_result.warning_level == 'high':
+            print("\n⚠️  Proceeding with potentially problematic prompt...")
+            print("   If you experience repetitive output, use the suggested prompt instead.\n")
+
     image = load_image(INPUT_PATH).convert('RGB')
 
     
-    if '<image>' in PROMPT:
+    if '<image>' in prompt:
 
         image_features = DeepseekOCRProcessor().tokenize_with_images(images = [image], bos=True, eos=True, cropping=CROP_MODE)
     else:
         image_features = ''
-
-    prompt = PROMPT
 
     result_out = asyncio.run(stream_generate(image_features, prompt))
 
