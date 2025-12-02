@@ -6,6 +6,7 @@ import re
 from tqdm import tqdm
 import torch
 from concurrent.futures import ThreadPoolExecutor
+import gc
  
 
 if torch.version.cuda == '11.8':
@@ -93,6 +94,73 @@ def pdf_to_images_high_quality(pdf_path, dpi=144, image_format="PNG"):
     
     pdf_document.close()
     return images
+
+def process_batch(images_batch, batch_start_idx, prompt, output_path, mmd_det_path, mmd_path, pdf_out_path):
+    """Process a batch of images and append to output files"""
+    batch_inputs = []
+
+    with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
+        batch_inputs = list(tqdm(
+            executor.map(process_single_image, images_batch),
+            total=len(images_batch),
+            desc=f"Pre-processing batch starting at page {batch_start_idx}"
+        ))
+
+    outputs_list = llm.generate(
+        batch_inputs,
+        sampling_params=sampling_params
+    )
+
+    contents_det_batch = ''
+    contents_batch = ''
+    draw_images_batch = []
+
+    for idx_in_batch, (output, img) in enumerate(zip(outputs_list, images_batch)):
+        global_page_idx = batch_start_idx + idx_in_batch
+        content = output.outputs[0].text
+
+        if '<｜end▁of▁sentence｜>' in content: # repeat no eos
+            content = content.replace('<｜end▁of▁sentence｜>', '')
+        else:
+            if SKIP_REPEAT:
+                continue
+
+        page_num = f'\\n<--- Page Split --->'
+
+        contents_det_batch += content + f'\\n{page_num}\\n'
+
+        image_draw = img.copy()
+
+        matches_ref, matches_images, mathes_other = re_match(content)
+        result_image = process_image_with_refs(image_draw, matches_ref, global_page_idx)
+
+        draw_images_batch.append(result_image)
+
+        for idx, a_match_image in enumerate(matches_images):
+            content = content.replace(a_match_image, f'![](images/' + str(global_page_idx) + '_' + str(idx) + '.jpg)\\n')
+
+        for idx, a_match_other in enumerate(mathes_other):
+            content = content.replace(a_match_other, '').replace('\\\\coloneqq', ':=').replace('\\\\eqqcolon', '=:').replace('\\n\\n\\n\\n', '\\n\\n').replace('\\n\\n\\n', '\\n\\n')
+
+        contents_batch += content + f'\\n{page_num}\\n'
+
+    # Append to files instead of accumulating in memory
+    with open(mmd_det_path, 'a', encoding='utf-8') as afile:
+        afile.write(contents_det_batch)
+
+    with open(mmd_path, 'a', encoding='utf-8') as afile:
+        afile.write(contents_batch)
+
+    # Convert and save PDF for this batch
+    if draw_images_batch:
+        batch_pdf_path = f"{pdf_out_path}_batch_{batch_start_idx}.pdf"
+        pil_to_pdf_img2pdf(draw_images_batch, batch_pdf_path)
+
+    # Memory cleanup
+    del batch_inputs, outputs_list, contents_det_batch, contents_batch, draw_images_batch
+    gc.collect()
+
+    return len(images_batch)
 
 def pil_to_pdf_img2pdf(pil_images, output_path):
 
