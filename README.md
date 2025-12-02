@@ -162,6 +162,8 @@ for output in model_outputs:
     print(output.outputs[0].text)
 ```
 ## Transformers-Inference
+
+### GPU Inference (with flash-attention)
 - Transformers
 ```python
 from transformers import AutoModel, AutoTokenizer
@@ -186,6 +188,76 @@ or you can
 cd DeepSeek-OCR-master/DeepSeek-OCR-hf
 python run_dpsk_ocr.py
 ```
+
+### Windows 11 / CPU-Only Inference
+
+**For Windows 11 users or systems without CUDA support:**
+
+Flash-attention has compatibility issues on Windows and with older GPUs (like RTX 1060). Use these alternative scripts:
+
+#### Option 1: Windows-Compatible Script (Auto-detects GPU/CPU)
+```Shell
+cd DeepSeek-OCR-master/DeepSeek-OCR-hf
+python run_dpsk_ocr_windows.py
+```
+
+This script automatically:
+- Detects if CUDA is available
+- Falls back to CPU if needed
+- Uses appropriate dtype (float16/float32) based on hardware
+- Avoids flash-attention for better compatibility
+
+#### Option 2: CPU-Only Script
+```Shell
+cd DeepSeek-OCR-master/DeepSeek-OCR-hf
+python run_dpsk_ocr_cpu.py
+```
+
+**Python code for CPU inference:**
+```python
+from transformers import AutoModel, AutoTokenizer
+import torch
+import os
+
+# Force CPU usage
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
+model_name = 'deepseek-ai/DeepSeek-OCR'
+
+tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+# Load without flash_attention_2, use float32 for CPU
+model = AutoModel.from_pretrained(
+    model_name, 
+    trust_remote_code=True, 
+    use_safetensors=True,
+    torch_dtype=torch.float32
+)
+model = model.eval()
+
+prompt = "<image>\n<|grounding|>Convert the document to markdown. "
+image_file = 'your_image.jpg'
+output_path = 'your/output/dir'
+
+# Use smaller sizes for faster CPU processing
+res = model.infer(
+    tokenizer, 
+    prompt=prompt, 
+    image_file=image_file, 
+    output_path=output_path, 
+    base_size=512,      # Tiny size for CPU
+    image_size=512, 
+    crop_mode=False, 
+    save_results=True, 
+    test_compress=True
+)
+```
+
+**Important Notes for CPU/Windows Users:**
+- CPU inference is significantly slower than GPU (10-100x depending on image size)
+- Start with smaller image sizes (Tiny: 512x512) for testing
+- Requires 16GB+ RAM for comfortable operation
+- Flash-attention is NOT required - the model works fine without it
+- See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for common issues
 ## Support-Modes
 The current open-source model supports the following modes:
 - Native resolution:
