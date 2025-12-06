@@ -89,21 +89,60 @@ pip install flash-attn==2.7.3 --no-build-isolation
 ## vLLM-Inference
 - VLLM:
 >**Note:** change the INPUT_PATH/OUTPUT_PATH and other settings in the DeepSeek-OCR-master/DeepSeek-OCR-vllm/config.py
+
+### Mode Selection
+The vLLM implementation now supports selecting different OCR modes at runtime. You can choose from:
+- **Tiny**: 512×512 (64 vision tokens) - Fastest, lowest memory
+- **Small**: 640×640 (100 vision tokens) - Fast, low memory
+- **Base**: 1024×1024 (256 vision tokens) - Balanced performance
+- **Large**: 1280×1280 (400 vision tokens) - High quality
+- **Gundam**: Dynamic resolution (variable tokens) - Best quality for documents
+
+#### Option 1: Set mode in config.py (recommended for consistent usage)
+Edit `DeepSeek-OCR-master/DeepSeek-OCR-vllm/config.py`:
+```python
+MODE = 'Gundam'  # Change to: Tiny, Small, Base, Large, or Gundam
+```
+
+#### Option 2: Use command-line arguments (recommended for testing different modes)
 ```Shell
 cd DeepSeek-OCR-master/DeepSeek-OCR-vllm
 ```
+
 1. image: streaming output
 ```Shell
+# Using config.py settings
 python run_dpsk_ocr_image.py
+
+# Or specify mode via command line
+python run_dpsk_ocr_image.py --mode Gundam
+python run_dpsk_ocr_image.py --mode Base --input /path/to/image.jpg --output /path/to/output
 ```
+
 2. pdf: concurrency ~2500tokens/s(an A100-40G)
 ```Shell
+# Using config.py settings
 python run_dpsk_ocr_pdf.py
+
+# Or specify mode via command line
+python run_dpsk_ocr_pdf.py --mode Small
+python run_dpsk_ocr_pdf.py --mode Gundam --input /path/to/document.pdf --output /path/to/output
 ```
+
 3. batch eval for benchmarks
 ```Shell
+# Using config.py settings
 python run_dpsk_ocr_eval_batch.py
+
+# Or specify mode via command line
+python run_dpsk_ocr_eval_batch.py --mode Base
+python run_dpsk_ocr_eval_batch.py --mode Tiny --input /path/to/images --output /path/to/output
 ```
+
+**Command-line options:**
+- `--mode`: OCR mode (Tiny, Small, Base, Large, Gundam)
+- `--input`: Input file/directory path (overrides config.py)
+- `--output`: Output directory path (overrides config.py)
 
 **[2025/10/23] The version of upstream [vLLM](https://docs.vllm.ai/projects/recipes/en/latest/DeepSeek/DeepSeek-OCR.html#installing-vllm):**
 

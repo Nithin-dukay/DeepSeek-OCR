@@ -2,6 +2,7 @@ import os
 import re
 from tqdm import tqdm
 import torch
+import argparse
 if torch.version.cuda == '11.8':
     os.environ["TRITON_PTXAS_PATH"] = "/usr/local/cuda-11.8/bin/ptxas"
 os.environ['VLLM_USE_V1'] = '0'
@@ -18,6 +19,7 @@ from vllm.model_executor.models.registry import ModelRegistry
 from vllm import LLM, SamplingParams
 from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
 from process.image_process import DeepseekOCRProcessor
+from modes import get_mode_config, get_available_modes
 ModelRegistry.register_model("DeepseekOCRForCausalLM", DeepseekOCRForCausalLM)
 
 
@@ -78,27 +80,54 @@ def re_match(text):
         mathes_other.append(a_match[0])
     return matches, mathes_other
 
-def process_single_image(image):
+def process_single_image(image, crop_mode, image_size, base_size):
     """single image"""
     prompt_in = prompt
     cache_item = {
         "prompt": prompt_in,
-        "multi_modal_data": {"image": DeepseekOCRProcessor().tokenize_with_images(images = [image], bos=True, eos=True, cropping=CROP_MODE)},
+        "multi_modal_data": {"image": DeepseekOCRProcessor().tokenize_with_images(
+            images=[image], bos=True, eos=True, cropping=crop_mode,
+            image_size=image_size, base_size=base_size
+        )},
     }
     return cache_item
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='DeepSeek-OCR Batch Evaluation with vLLM')
+    parser.add_argument('--mode', type=str, default=None, 
+                        choices=get_available_modes(),
+                        help=f'OCR mode to use. Available: {", ".join(get_available_modes())}. If not specified, uses config.py settings.')
+    parser.add_argument('--input', type=str, default=None,
+                        help='Input directory path with images (overrides config.py INPUT_PATH)')
+    parser.add_argument('--output', type=str, default=None,
+                        help='Output directory path (overrides config.py OUTPUT_PATH)')
+    
+    args = parser.parse_args()
+    
+    # Get mode configuration
+    if args.mode:
+        base_size, image_size, crop_mode = get_mode_config(args.mode)
+        print(f"Using mode: {args.mode} (base_size={base_size}, image_size={image_size}, crop_mode={crop_mode})")
+    else:
+        # Use config.py defaults
+        from config import BASE_SIZE, IMAGE_SIZE
+        base_size, image_size, crop_mode = BASE_SIZE, IMAGE_SIZE, CROP_MODE
+        print(f"Using config.py settings (base_size={base_size}, image_size={image_size}, crop_mode={crop_mode})")
+    
+    # Get input/output paths
+    input_path = args.input if args.input else INPUT_PATH
+    output_path = args.output if args.output else OUTPUT_PATH
 
     # INPUT_PATH = OmniDocBench images path
 
-    os.makedirs(OUTPUT_PATH, exist_ok=True)
+    os.makedirs(output_path, exist_ok=True)
 
     # print('image processing until processing prompts.....')
 
     print(f'{Colors.RED}glob images.....{Colors.RESET}')
 
-    images_path = glob.glob(f'{INPUT_PATH}/*')
+    images_path = glob.glob(f'{input_path}/*')
 
     images = []
 
@@ -124,7 +153,7 @@ if __name__ == "__main__":
 
     with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:  
         batch_inputs = list(tqdm(
-            executor.map(process_single_image, images),
+            executor.map(lambda img: process_single_image(img, crop_mode, image_size, base_size), images),
             total=len(images),
             desc="Pre-processed images"
         ))
@@ -137,8 +166,6 @@ if __name__ == "__main__":
         sampling_params=sampling_params
     )
 
-
-    output_path = OUTPUT_PATH
 
     os.makedirs(output_path, exist_ok=True)
 

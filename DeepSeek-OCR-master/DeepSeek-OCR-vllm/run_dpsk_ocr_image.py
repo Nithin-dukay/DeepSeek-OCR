@@ -1,6 +1,7 @@
 import asyncio
 import re
 import os
+import argparse
 
 import torch
 if torch.version.cuda == '11.8':
@@ -20,6 +21,7 @@ from tqdm import tqdm
 from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
 from process.image_process import DeepseekOCRProcessor
 from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, CROP_MODE
+from modes import get_mode_config, get_available_modes
 
 
 
@@ -70,7 +72,7 @@ def extract_coordinates_and_label(ref_text, image_width, image_height):
     return (label_type, cor_list)
 
 
-def draw_bounding_boxes(image, refs):
+def draw_bounding_boxes(image, refs, output_dir):
 
     image_width, image_height = image.size
     img_draw = image.copy()
@@ -105,7 +107,7 @@ def draw_bounding_boxes(image, refs):
                     if label_type == 'image':
                         try:
                             cropped = image.crop((x1, y1, x2, y2))
-                            cropped.save(f"{OUTPUT_PATH}/images/{img_idx}.jpg")
+                            cropped.save(f"{output_dir}/images/{img_idx}.jpg")
                         except Exception as e:
                             print(e)
                             pass
@@ -137,8 +139,8 @@ def draw_bounding_boxes(image, refs):
     return img_draw
 
 
-def process_image_with_refs(image, ref_texts):
-    result_image = draw_bounding_boxes(image, ref_texts)
+def process_image_with_refs(image, ref_texts, output_dir):
+    result_image = draw_bounding_boxes(image, ref_texts, output_dir)
     return result_image
 
 
@@ -202,16 +204,43 @@ async def stream_generate(image=None, prompt=''):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='DeepSeek-OCR Image Processing with vLLM')
+    parser.add_argument('--mode', type=str, default=None, 
+                        choices=get_available_modes(),
+                        help=f'OCR mode to use. Available: {", ".join(get_available_modes())}. If not specified, uses config.py settings.')
+    parser.add_argument('--input', type=str, default=None,
+                        help='Input image path (overrides config.py INPUT_PATH)')
+    parser.add_argument('--output', type=str, default=None,
+                        help='Output directory path (overrides config.py OUTPUT_PATH)')
+    
+    args = parser.parse_args()
+    
+    # Get mode configuration
+    if args.mode:
+        base_size, image_size, crop_mode = get_mode_config(args.mode)
+        print(f"Using mode: {args.mode} (base_size={base_size}, image_size={image_size}, crop_mode={crop_mode})")
+    else:
+        # Use config.py defaults
+        from config import BASE_SIZE, IMAGE_SIZE
+        base_size, image_size, crop_mode = BASE_SIZE, IMAGE_SIZE, CROP_MODE
+        print(f"Using config.py settings (base_size={base_size}, image_size={image_size}, crop_mode={crop_mode})")
+    
+    # Get input/output paths
+    input_path = args.input if args.input else INPUT_PATH
+    output_path = args.output if args.output else OUTPUT_PATH
 
-    os.makedirs(OUTPUT_PATH, exist_ok=True)
-    os.makedirs(f'{OUTPUT_PATH}/images', exist_ok=True)
+    os.makedirs(output_path, exist_ok=True)
+    os.makedirs(f'{output_path}/images', exist_ok=True)
 
-    image = load_image(INPUT_PATH).convert('RGB')
+    image = load_image(input_path).convert('RGB')
 
     
     if '<image>' in PROMPT:
 
-        image_features = DeepseekOCRProcessor().tokenize_with_images(images = [image], bos=True, eos=True, cropping=CROP_MODE)
+        image_features = DeepseekOCRProcessor().tokenize_with_images(
+            images=[image], bos=True, eos=True, cropping=crop_mode,
+            image_size=image_size, base_size=base_size
+        )
     else:
         image_features = ''
 
@@ -229,12 +258,12 @@ if __name__ == "__main__":
 
         outputs = result_out
 
-        with open(f'{OUTPUT_PATH}/result_ori.mmd', 'w', encoding = 'utf-8') as afile:
+        with open(f'{output_path}/result_ori.mmd', 'w', encoding = 'utf-8') as afile:
             afile.write(outputs)
 
         matches_ref, matches_images, mathes_other = re_match(outputs)
         # print(matches_ref)
-        result = process_image_with_refs(image_draw, matches_ref)
+        result = process_image_with_refs(image_draw, matches_ref, output_path)
 
 
         for idx, a_match_image in enumerate(tqdm(matches_images, desc="image")):
@@ -245,7 +274,7 @@ if __name__ == "__main__":
 
         # if 'structural formula' in conversation[0]['content']:
         #     outputs = '<smiles>' + outputs + '</smiles>'
-        with open(f'{OUTPUT_PATH}/result.mmd', 'w', encoding = 'utf-8') as afile:
+        with open(f'{output_path}/result.mmd', 'w', encoding = 'utf-8') as afile:
             afile.write(outputs)
 
         if 'line_type' in outputs:
@@ -297,7 +326,7 @@ if __name__ == "__main__":
                 pass
 
 
-            plt.savefig(f'{OUTPUT_PATH}/geo.jpg')
+            plt.savefig(f'{output_path}/geo.jpg')
             plt.close()
 
-        result.save(f'{OUTPUT_PATH}/result_with_boxes.jpg')
+        result.save(f'{output_path}/result_with_boxes.jpg')
