@@ -5,9 +5,25 @@
 # Large: base_size = 1280, image_size = 1280, crop_mode = False
 # Gundam: base_size = 1024, image_size = 640, crop_mode = True
 
-BASE_SIZE = 1024
-IMAGE_SIZE = 640
-CROP_MODE = True
+# ============================================================================
+# MODE SELECTION: Choose one of the following modes
+# Options: "tiny", "small", "base", "large", "gundam"
+# ============================================================================
+MODE = "gundam"  # Change this to select different modes
+
+# Import mode configuration helper
+from mode_config import OCRModeConfig
+
+# Get mode configuration
+_mode_config = OCRModeConfig.get_mode_config(MODE)
+BASE_SIZE = _mode_config["base_size"]
+IMAGE_SIZE = _mode_config["image_size"]
+CROP_MODE = _mode_config["crop_mode"]
+
+# You can also manually override these values if needed:
+# BASE_SIZE = 1024
+# IMAGE_SIZE = 640
+# CROP_MODE = True
 MIN_CROPS= 2
 MAX_CROPS= 6 # max:9; If your GPU memory is small, it is recommended to set it to 6.
 MAX_CONCURRENCY = 100 # If you have limited GPU memory, lower the concurrency count.

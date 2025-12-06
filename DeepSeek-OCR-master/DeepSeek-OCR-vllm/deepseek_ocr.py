@@ -46,6 +46,10 @@ from config import IMAGE_SIZE, BASE_SIZE, CROP_MODE, PRINT_NUM_VIS_TOKENS, PROMP
 # The image token id may be various
 _IMAGE_TOKEN = "<image>"
 
+# Note: IMAGE_SIZE, BASE_SIZE, and CROP_MODE are configured via MODE setting in config.py
+# Available modes: tiny, small, base, large, gundam
+# To change mode, edit the MODE variable in config.py
+
 
 class DeepseekOCRProcessingInfo(BaseProcessingInfo):
 
