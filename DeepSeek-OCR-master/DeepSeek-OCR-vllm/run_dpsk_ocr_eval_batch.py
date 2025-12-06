@@ -2,12 +2,14 @@ import os
 import re
 from tqdm import tqdm
 import torch
+import argparse
 if torch.version.cuda == '11.8':
     os.environ["TRITON_PTXAS_PATH"] = "/usr/local/cuda-11.8/bin/ptxas"
 os.environ['VLLM_USE_V1'] = '0'
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, MAX_CONCURRENCY, CROP_MODE, NUM_WORKERS
+from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, MAX_CONCURRENCY, NUM_WORKERS, MODE_CONFIGS
+import config
 from concurrent.futures import ThreadPoolExecutor
 import glob
 from PIL import Image
@@ -78,27 +80,54 @@ def re_match(text):
         mathes_other.append(a_match[0])
     return matches, mathes_other
 
-def process_single_image(image):
+def process_single_image(image, prompt_text, crop_mode):
     """single image"""
-    prompt_in = prompt
     cache_item = {
-        "prompt": prompt_in,
-        "multi_modal_data": {"image": DeepseekOCRProcessor().tokenize_with_images(images = [image], bos=True, eos=True, cropping=CROP_MODE)},
+        "prompt": prompt_text,
+        "multi_modal_data": {"image": DeepseekOCRProcessor().tokenize_with_images(images = [image], bos=True, eos=True, cropping=crop_mode)},
     }
     return cache_item
 
 
 if __name__ == "__main__":
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description='DeepSeek-OCR Batch Evaluation with vLLM')
+    parser.add_argument('--mode', type=str, default=None, 
+                        choices=['tiny', 'small', 'base', 'large', 'gundam'],
+                        help='OCR mode: tiny (512×512), small (640×640), base (1024×1024), large (1280×1280), gundam (dynamic tiles). Overrides config.py MODE setting.')
+    parser.add_argument('--input', type=str, default=None,
+                        help='Input images directory path. Overrides config.py INPUT_PATH.')
+    parser.add_argument('--output', type=str, default=None,
+                        help='Output directory path. Overrides config.py OUTPUT_PATH.')
+    parser.add_argument('--prompt', type=str, default=None,
+                        help='Prompt text. Overrides config.py PROMPT.')
+    
+    args = parser.parse_args()
+    
+    # Apply mode override if specified
+    if args.mode:
+        mode_config = MODE_CONFIGS[args.mode.lower()]
+        config.BASE_SIZE = mode_config['base_size']
+        config.IMAGE_SIZE = mode_config['image_size']
+        config.CROP_MODE = mode_config['crop_mode']
+        print(f"Mode: {args.mode.upper()} - {mode_config['description']}")
+    else:
+        print(f"Mode: {config.MODE.upper()} - {MODE_CONFIGS[config.MODE.lower()]['description']}")
+    
+    # Apply other overrides
+    input_path = args.input if args.input else INPUT_PATH
+    output_path = args.output if args.output else OUTPUT_PATH
+    prompt_text = args.prompt if args.prompt else PROMPT
 
     # INPUT_PATH = OmniDocBench images path
 
-    os.makedirs(OUTPUT_PATH, exist_ok=True)
+    os.makedirs(output_path, exist_ok=True)
 
     # print('image processing until processing prompts.....')
 
     print(f'{Colors.RED}glob images.....{Colors.RESET}')
 
-    images_path = glob.glob(f'{INPUT_PATH}/*')
+    images_path = glob.glob(f'{input_path}/*')
 
     images = []
 
@@ -106,7 +135,7 @@ if __name__ == "__main__":
         image = Image.open(image_path).convert('RGB')
         images.append(image)
 
-    prompt = PROMPT
+    prompt = prompt_text
 
     # batch_inputs = []
 
@@ -124,7 +153,7 @@ if __name__ == "__main__":
 
     with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:  
         batch_inputs = list(tqdm(
-            executor.map(process_single_image, images),
+            executor.map(lambda img: process_single_image(img, prompt, config.CROP_MODE), images),
             total=len(images),
             desc="Pre-processed images"
         ))
@@ -137,8 +166,6 @@ if __name__ == "__main__":
         sampling_params=sampling_params
     )
 
-
-    output_path = OUTPUT_PATH
 
     os.makedirs(output_path, exist_ok=True)
 

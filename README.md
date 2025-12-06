@@ -89,21 +89,65 @@ pip install flash-attn==2.7.3 --no-build-isolation
 ## vLLM-Inference
 - VLLM:
 >**Note:** change the INPUT_PATH/OUTPUT_PATH and other settings in the DeepSeek-OCR-master/DeepSeek-OCR-vllm/config.py
+
+### Mode Selection
+The vLLM implementation now supports selecting different OCR modes for different speed/quality trade-offs:
+
+**Available Modes:**
+- **tiny**: 512×512 resolution (64 vision tokens) - Fastest, lowest memory
+- **small**: 640×640 resolution (100 vision tokens) - Fast, low memory  
+- **base**: 1024×1024 resolution (256 vision tokens) - Balanced
+- **large**: 1280×1280 resolution (400 vision tokens) - High quality, more memory
+- **gundam**: Dynamic resolution with tiles (n×640×640 + 1×1024×1024) - Best quality, adaptive (default)
+
+**Configuration Methods:**
+
+1. **Edit config.py** (persistent setting):
+```python
+# In DeepSeek-OCR-master/DeepSeek-OCR-vllm/config.py
+MODE = 'base'  # Options: 'tiny', 'small', 'base', 'large', 'gundam'
+```
+
+2. **Command-line argument** (runtime override):
 ```Shell
 cd DeepSeek-OCR-master/DeepSeek-OCR-vllm
 ```
+
 1. image: streaming output
 ```Shell
+# Use default mode from config.py
 python run_dpsk_ocr_image.py
+
+# Override with specific mode
+python run_dpsk_ocr_image.py --mode base
+python run_dpsk_ocr_image.py --mode small --input /path/to/image.jpg --output /path/to/output
 ```
+
 2. pdf: concurrency ~2500tokens/s(an A100-40G)
 ```Shell
+# Use default mode from config.py
 python run_dpsk_ocr_pdf.py
+
+# Override with specific mode
+python run_dpsk_ocr_pdf.py --mode gundam
+python run_dpsk_ocr_pdf.py --mode large --input /path/to/document.pdf --output /path/to/output
 ```
+
 3. batch eval for benchmarks
 ```Shell
+# Use default mode from config.py
 python run_dpsk_ocr_eval_batch.py
+
+# Override with specific mode
+python run_dpsk_ocr_eval_batch.py --mode base
+python run_dpsk_ocr_eval_batch.py --mode small --input /path/to/images --output /path/to/output
 ```
+
+**Mode Selection Guidelines:**
+- Use **tiny/small** for: Quick processing, limited GPU memory, simple documents
+- Use **base** for: Balanced performance, general documents
+- Use **large** for: High-quality OCR, complex layouts, sufficient GPU memory
+- Use **gundam** for: Best quality, adaptive to image size, documents with fine details
 
 **[2025/10/23] The version of upstream [vLLM](https://docs.vllm.ai/projects/recipes/en/latest/DeepSeek/DeepSeek-OCR.html#installing-vllm):**
 

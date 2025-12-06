@@ -1,6 +1,7 @@
 import asyncio
 import re
 import os
+import argparse
 
 import torch
 if torch.version.cuda == '11.8':
@@ -19,7 +20,8 @@ import numpy as np
 from tqdm import tqdm
 from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
 from process.image_process import DeepseekOCRProcessor
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, CROP_MODE
+from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, MODE_CONFIGS
+import config
 
 
 
@@ -202,20 +204,48 @@ async def stream_generate(image=None, prompt=''):
 
 
 if __name__ == "__main__":
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description='DeepSeek-OCR Image Inference with vLLM')
+    parser.add_argument('--mode', type=str, default=None, 
+                        choices=['tiny', 'small', 'base', 'large', 'gundam'],
+                        help='OCR mode: tiny (512×512), small (640×640), base (1024×1024), large (1280×1280), gundam (dynamic tiles). Overrides config.py MODE setting.')
+    parser.add_argument('--input', type=str, default=None,
+                        help='Input image path. Overrides config.py INPUT_PATH.')
+    parser.add_argument('--output', type=str, default=None,
+                        help='Output directory path. Overrides config.py OUTPUT_PATH.')
+    parser.add_argument('--prompt', type=str, default=None,
+                        help='Prompt text. Overrides config.py PROMPT.')
+    
+    args = parser.parse_args()
+    
+    # Apply mode override if specified
+    if args.mode:
+        mode_config = MODE_CONFIGS[args.mode.lower()]
+        config.BASE_SIZE = mode_config['base_size']
+        config.IMAGE_SIZE = mode_config['image_size']
+        config.CROP_MODE = mode_config['crop_mode']
+        print(f"Mode: {args.mode.upper()} - {mode_config['description']}")
+    else:
+        print(f"Mode: {config.MODE.upper()} - {MODE_CONFIGS[config.MODE.lower()]['description']}")
+    
+    # Apply other overrides
+    input_path = args.input if args.input else INPUT_PATH
+    output_path = args.output if args.output else OUTPUT_PATH
+    prompt_text = args.prompt if args.prompt else PROMPT
+    
+    os.makedirs(output_path, exist_ok=True)
+    os.makedirs(f'{output_path}/images', exist_ok=True)
 
-    os.makedirs(OUTPUT_PATH, exist_ok=True)
-    os.makedirs(f'{OUTPUT_PATH}/images', exist_ok=True)
-
-    image = load_image(INPUT_PATH).convert('RGB')
+    image = load_image(input_path).convert('RGB')
 
     
-    if '<image>' in PROMPT:
+    if '<image>' in prompt_text:
 
-        image_features = DeepseekOCRProcessor().tokenize_with_images(images = [image], bos=True, eos=True, cropping=CROP_MODE)
+        image_features = DeepseekOCRProcessor().tokenize_with_images(images = [image], bos=True, eos=True, cropping=config.CROP_MODE)
     else:
         image_features = ''
 
-    prompt = PROMPT
+    prompt = prompt_text
 
     result_out = asyncio.run(stream_generate(image_features, prompt))
 
@@ -229,7 +259,7 @@ if __name__ == "__main__":
 
         outputs = result_out
 
-        with open(f'{OUTPUT_PATH}/result_ori.mmd', 'w', encoding = 'utf-8') as afile:
+        with open(f'{output_path}/result_ori.mmd', 'w', encoding = 'utf-8') as afile:
             afile.write(outputs)
 
         matches_ref, matches_images, mathes_other = re_match(outputs)
@@ -245,7 +275,7 @@ if __name__ == "__main__":
 
         # if 'structural formula' in conversation[0]['content']:
         #     outputs = '<smiles>' + outputs + '</smiles>'
-        with open(f'{OUTPUT_PATH}/result.mmd', 'w', encoding = 'utf-8') as afile:
+        with open(f'{output_path}/result.mmd', 'w', encoding = 'utf-8') as afile:
             afile.write(outputs)
 
         if 'line_type' in outputs:
@@ -297,7 +327,7 @@ if __name__ == "__main__":
                 pass
 
 
-            plt.savefig(f'{OUTPUT_PATH}/geo.jpg')
+            plt.savefig(f'{output_path}/geo.jpg')
             plt.close()
 
-        result.save(f'{OUTPUT_PATH}/result_with_boxes.jpg')
+        result.save(f'{output_path}/result_with_boxes.jpg')
