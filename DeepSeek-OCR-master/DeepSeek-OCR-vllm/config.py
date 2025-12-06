@@ -1,13 +1,24 @@
-# TODO: change modes
-# Tiny: base_size = 512, image_size = 512, crop_mode = False
-# Small: base_size = 640, image_size = 640, crop_mode = False
-# Base: base_size = 1024, image_size = 1024, crop_mode = False
-# Large: base_size = 1280, image_size = 1280, crop_mode = False
-# Gundam: base_size = 1024, image_size = 640, crop_mode = True
+# Modes configuration
+MODES = {
+    "tiny": {"base_size": 512, "image_size": 512, "crop_mode": False},
+    "small": {"base_size": 640, "image_size": 640, "crop_mode": False},
+    "base": {"base_size": 1024, "image_size": 1024, "crop_mode": False},
+    "large": {"base_size": 1280, "image_size": 1280, "crop_mode": False},
+    "gundam": {"base_size": 1024, "image_size": 640, "crop_mode": True},
+}
 
-BASE_SIZE = 1024
-IMAGE_SIZE = 640
-CROP_MODE = True
+# Default mode
+DEFAULT_MODE = "gundam"
+
+# Get mode parameters
+def get_mode_params(mode=DEFAULT_MODE):
+    return MODES.get(mode, MODES[DEFAULT_MODE])
+
+# Current mode parameters (for backward compatibility)
+mode_params = get_mode_params()
+BASE_SIZE = mode_params["base_size"]
+IMAGE_SIZE = mode_params["image_size"]
+CROP_MODE = mode_params["crop_mode"]
 MIN_CROPS= 2
 MAX_CROPS= 6 # max:9; If your GPU memory is small, it is recommended to set it to 6.
 MAX_CONCURRENCY = 100 # If you have limited GPU memory, lower the concurrency count.
