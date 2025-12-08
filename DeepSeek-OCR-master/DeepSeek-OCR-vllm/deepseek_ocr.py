@@ -337,27 +337,34 @@ class DeepseekOCRForCausalLM(nn.Module, SupportsMultiModal, SupportsPP):
         images_spatial_crop = kwargs.pop("images_spatial_crop", None)
         images_crop = kwargs.pop("images_crop", None)
 
-
-        if pixel_values is None or torch.sum(pixel_values).item() == 0:
+        # Handle text-only inputs (no images provided)
+        if pixel_values is None:
             return None
+        
+        # Handle empty image tensors or lists
+        if isinstance(pixel_values, torch.Tensor):
+            # Check if tensor is empty or all zeros
+            if pixel_values.numel() == 0 or torch.sum(pixel_values).item() == 0:
+                return None
+        elif isinstance(pixel_values, list):
+            # Check if list is empty
+            if len(pixel_values) == 0:
+                return None
+        else:
+            # Invalid type for pixel_values
+            raise ValueError("Incorrect type of pixel values. "
+                             f"Got type: {type(pixel_values)}")
 
-        if pixel_values is not None:
-            if not isinstance(pixel_values, (torch.Tensor, list)):
-                raise ValueError("Incorrect type of pixel values. "
-                                 f"Got type: {type(pixel_values)}")
+        # Validate image metadata when images are present
+        if not isinstance(images_spatial_crop, (torch.Tensor, list)):
+            raise ValueError("Incorrect type of image sizes. "
+                             f"Got type: {type(images_spatial_crop)}")
+        
+        if not isinstance(images_crop, (torch.Tensor, list)):
+            raise ValueError("Incorrect type of image crop. "
+                             f"Got type: {type(images_crop)}")
 
-            if not isinstance(images_spatial_crop, (torch.Tensor, list)):
-                raise ValueError("Incorrect type of image sizes. "
-                                 f"Got type: {type(images_spatial_crop)}")
-            
-            if not isinstance(images_crop, (torch.Tensor, list)):
-                raise ValueError("Incorrect type of image crop. "
-                                 f"Got type: {type(images_crop)}")
-
-            return [pixel_values, images_crop, images_spatial_crop]
-
-
-        raise AssertionError("This line should be unreachable.")
+        return [pixel_values, images_crop, images_spatial_crop]
     
 
 
@@ -469,25 +476,36 @@ class DeepseekOCRForCausalLM(nn.Module, SupportsMultiModal, SupportsPP):
     def _process_image_input(
             self, image_input) -> torch.Tensor:
         
-
         # image_input: [pixel_values, images_crop, images_spatial_crop]
-    
-        pixel_values = image_input[0].to(torch.bfloat16)
-        # print(image_input[1][0].shape)
-        # print(type(image_input[1]))
-        # exit()
-
-        # images_crop = image_input[1].to(torch.bfloat16)
+        
+        # Additional validation for empty/invalid image inputs
+        if image_input is None or len(image_input) != 3:
+            return None
+        
+        pixel_values = image_input[0]
         images_crop = image_input[1]
-        # images_crop = image_input[1]
-        images_spatial_crop = image_input[2].to(dtype=torch.long)
+        images_spatial_crop = image_input[2]
+        
+        # Validate pixel_values before processing
+        if isinstance(pixel_values, torch.Tensor):
+            if pixel_values.numel() == 0:
+                return None
+            pixel_values = pixel_values.to(torch.bfloat16)
+        else:
+            # Handle list of tensors
+            if len(pixel_values) == 0:
+                return None
+            pixel_values = pixel_values
+        
+        # Convert images_spatial_crop to proper dtype
+        if isinstance(images_spatial_crop, torch.Tensor):
+            images_spatial_crop = images_spatial_crop.to(dtype=torch.long)
 
         # local_start = time.time()
         vision_features = self._pixel_values_to_embedding(
-            pixel_values=pixel_values, images_crop = images_crop,  images_spatial_crop=images_spatial_crop)
+            pixel_values=pixel_values, images_crop=images_crop, images_spatial_crop=images_spatial_crop)
 
         # local_total_time = time.time() - local_start
-
         # print('encoder_time: ', local_total_time)
         # exit()
         return vision_features
