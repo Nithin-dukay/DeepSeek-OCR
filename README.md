@@ -38,6 +38,39 @@
   <a href="https://arxiv.org/abs/2510.18234"><b>📄 Arxiv Paper Link</b></a> |
 </p>
 
+---
+
+## 🌐 Community / 社区交流
+
+<div align="center">
+
+### Join Our Community / 加入我们的社区
+
+<table>
+<tr>
+<td align="center" width="50%">
+<h4>🌍 International Community</h4>
+<a href="https://discord.gg/Tc7c45Zzu5" target="_blank">
+<img src="https://img.shields.io/badge/Discord-Join%20Us-7289da?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"/>
+</a>
+<br><br>
+Join our Discord server for discussions,<br>support, and updates in English.
+</td>
+<td align="center" width="50%">
+<h4>🇨🇳 微信交流群</h4>
+<img src="assets/wechat_group.svg" width="200" alt="WeChat Group QR Code"/>
+<br>
+<b>扫码加入微信群</b>
+<br>
+<sub>⚠️ 注意：微信群二维码7天后过期，如已过期请在 <a href="https://github.com/deepseek-ai/DeepSeek-OCR/issues">Issues</a> 中反馈</sub>
+</td>
+</tr>
+</table>
+
+</div>
+
+---
+
 <h2>
 <p align="center">
   <a href="">DeepSeek-OCR: Contexts Optical Compression</a>
