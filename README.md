@@ -65,6 +65,9 @@
 
 
 ## Install
+
+### Option 1: CUDA 11.8 (Standard Installation)
+
 >Our environment is cuda11.8+torch2.6.0.
 1. Clone this repository and navigate to the DeepSeek-OCR folder
 ```bash
@@ -85,6 +88,33 @@ pip install -r requirements.txt
 pip install flash-attn==2.7.3 --no-build-isolation
 ```
 **Note:** if you want vLLM and transformers codes to run in the same environment, you don't need to worry about this installation error like: vllm 0.8.5+cu118 requires transformers>=4.51.1
+
+### Option 2: CUDA 12.8 (RTX 5090 and newer GPUs)
+
+For systems with **NVIDIA RTX 5090** or other GPUs requiring **CUDA 12.8**, we provide a specialized installation guide and automated script.
+
+**Quick Start (Automated):**
+```bash
+git clone https://github.com/deepseek-ai/DeepSeek-OCR.git
+cd DeepSeek-OCR
+conda create -n deepseek-ocr python=3.12 -y
+conda activate deepseek-ocr
+bash scripts/install_cuda128_rtx5090.sh
+```
+
+**Manual Installation:**
+
+For detailed step-by-step instructions, see: **[CUDA 12.8 Installation Guide](docs/INSTALL_CUDA_12.8.md)**
+
+**Key Points:**
+- Uses pre-built wheels for vllm and flash-attn
+- Requires specific installation order due to dependency conflicts
+- Critical torchvision fix required (see installation guide)
+- Based on community solution from [Issue #240](https://github.com/deepseek-ai/DeepSeek-OCR/issues/240)
+
+**Troubleshooting:**
+
+If you encounter issues, see: **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)**
 
 ## vLLM-Inference
 - VLLM:
