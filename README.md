@@ -57,6 +57,7 @@
 
 ## Contents
 - [Install](#install)
+- [Troubleshooting](#troubleshooting)
 - [vLLM Inference](#vllm-inference)
 - [Transformers Inference](#transformers-inference)
   
@@ -79,12 +80,66 @@ conda activate deepseek-ocr
 
 - download the vllm-0.8.5 [whl](https://github.com/vllm-project/vllm/releases/tag/v0.8.5) 
 ```Shell
+# Step 1: Install PyTorch first (REQUIRED - xformers needs torch to build)
 pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu118
+
+# Step 2: Install vLLM (this will build xformers which requires torch)
 pip install vllm-0.8.5+cu118-cp38-abi3-manylinux1_x86_64.whl
+
+# Step 3: Install other requirements
+pip install -r requirements.txt
+
+# Step 4: Install flash-attention
+pip install flash-attn==2.7.3 --no-build-isolation
+```
+
+**Important Notes:**
+- **You MUST install PyTorch before vLLM**. The xformers dependency requires torch to be present during its build process.
+- If you want vLLM and transformers codes to run in the same environment, you don't need to worry about this installation error like: vllm 0.8.5+cu118 requires transformers>=4.51.1
+
+**Troubleshooting:**
+
+If you encounter `ModuleNotFoundError: No module named 'torch'` when installing vLLM:
+1. Verify torch is installed: `python -c "import torch; print(torch.__version__)"`
+2. If torch is not installed, run: `pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu118`
+3. Then retry the vLLM installation: `pip install vllm-0.8.5+cu118-cp38-abi3-manylinux1_x86_64.whl`
+
+Alternative installation method (if the above fails):
+```Shell
+# Install torch first
+pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu118
+
+# Install xformers separately before vLLM
+pip install xformers==0.0.29.post2
+
+# Then install vLLM
+pip install vllm-0.8.5+cu118-cp38-abi3-manylinux1_x86_64.whl
+
+# Install other requirements
 pip install -r requirements.txt
 pip install flash-attn==2.7.3 --no-build-isolation
 ```
-**Note:** if you want vLLM and transformers codes to run in the same environment, you don't need to worry about this installation error like: vllm 0.8.5+cu118 requires transformers>=4.51.1
+
+**Automated Installation:**
+
+For easier installation, use the provided installation scripts:
+```Shell
+# Option 1: Bash script (Linux/Mac)
+chmod +x install.sh
+./install.sh
+
+# Option 2: Python script (Cross-platform)
+python install.py
+```
+
+## Troubleshooting
+
+For detailed troubleshooting information, especially regarding the xformers/torch dependency issue (Issue #296), please see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+
+**Common Issues:**
+- **ModuleNotFoundError: No module named 'torch'**: Make sure to install PyTorch BEFORE vLLM. See [TROUBLESHOOTING.md](TROUBLESHOOTING.md#issue-296-modulenotfounderror-no-module-named-torch-when-installing-xformers) for details.
+- **CUDA version mismatch**: Ensure your CUDA version matches the PyTorch installation.
+- **Out of memory errors**: Reduce batch size or use smaller image resolutions.
 
 ## vLLM-Inference
 - VLLM:

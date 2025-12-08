@@ -1,0 +1,56 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    ISSUE #296 FIX SUMMARY                                  ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+PROBLEM:
+--------
+ModuleNotFoundError: No module named 'torch' when installing xformers
+
+ROOT CAUSE:
+-----------
+xformers requires torch to be installed BEFORE it can build from source.
+pip tries to install all dependencies together, causing xformers to fail.
+
+SOLUTION:
+---------
+Install PyTorch FIRST, then vLLM (which includes xformers).
+
+FILES CREATED/MODIFIED:
+-----------------------
+✓ README.md              - Updated with clear installation steps
+✓ install.sh             - Automated bash installation script
+✓ install.py             - Automated Python installation script
+✓ TROUBLESHOOTING.md     - Comprehensive troubleshooting guide
+✓ ISSUE_296_FIX.md       - Detailed fix documentation
+
+QUICK FIX:
+----------
+1. pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu118
+2. pip install vllm-0.8.5+cu118-cp38-abi3-manylinux1_x86_64.whl
+3. pip install -r requirements.txt
+4. pip install flash-attn==2.7.3 --no-build-isolation
+
+OR USE AUTOMATED SCRIPTS:
+--------------------------
+./install.sh         (Linux/Mac)
+python install.py    (Cross-platform)
+
+KEY CHANGES IN README.md:
+--------------------------
+• Added numbered installation steps with clear comments
+• Emphasized PyTorch must be installed FIRST
+• Added inline troubleshooting section
+• Added alternative installation method
+• Added automated script instructions
+• Added link to comprehensive TROUBLESHOOTING.md
+
+VERIFICATION:
+-------------
+After installation, verify with:
+python -c "import torch; import vllm; import transformers; print('Success!')"
+
+FOR MORE DETAILS:
+-----------------
+• See TROUBLESHOOTING.md for comprehensive guide
+• See ISSUE_296_FIX.md for technical details
+• See README.md for updated installation instructions
