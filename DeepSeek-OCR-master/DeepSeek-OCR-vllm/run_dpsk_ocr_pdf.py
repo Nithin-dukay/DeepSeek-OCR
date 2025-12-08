@@ -220,12 +220,37 @@ def process_image_with_refs(image, ref_texts, jdx):
     return result_image
 
 
-def process_single_image(image):
-    """single image"""
+def process_single_image(image, base_size=None, image_size=None, cropping=None):
+    """single image
+    
+    Args:
+        image: PIL Image to process
+        base_size: Override base_size (global view size). If None, uses config.BASE_SIZE
+        image_size: Override image_size (local view size). If None, uses config.IMAGE_SIZE
+        cropping: Override cropping mode. If None, uses config.CROP_MODE
+    """
     prompt_in = prompt
+    
+    # Use provided parameters or fall back to config defaults
+    actual_cropping = cropping if cropping is not None else CROP_MODE
+    
+    # Build kwargs for tokenize_with_images
+    tokenize_kwargs = {
+        'images': [image],
+        'bos': True,
+        'eos': True,
+        'cropping': actual_cropping
+    }
+    
+    # Add optional size parameters if provided
+    if base_size is not None:
+        tokenize_kwargs['base_size'] = base_size
+    if image_size is not None:
+        tokenize_kwargs['image_size'] = image_size
+    
     cache_item = {
         "prompt": prompt_in,
-        "multi_modal_data": {"image": DeepseekOCRProcessor().tokenize_with_images(images = [image], bos=True, eos=True, cropping=CROP_MODE)},
+        "multi_modal_data": {"image": DeepseekOCRProcessor().tokenize_with_images(**tokenize_kwargs)},
     }
     return cache_item
 
@@ -244,13 +269,25 @@ if __name__ == "__main__":
     prompt = PROMPT
 
     # batch_inputs = []
-
+    
+    # Option 1: Use config.py defaults (CROP_MODE, BASE_SIZE, IMAGE_SIZE)
     with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:  
         batch_inputs = list(tqdm(
             executor.map(process_single_image, images),
             total=len(images),
             desc="Pre-processed images"
         ))
+    
+    # Option 2: Override mode dynamically for all images (uncomment to use)
+    # Example: Use Small mode (640x640, no cropping) for all pages
+    # from functools import partial
+    # process_with_mode = partial(process_single_image, base_size=640, image_size=640, cropping=False)
+    # with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:  
+    #     batch_inputs = list(tqdm(
+    #         executor.map(process_with_mode, images),
+    #         total=len(images),
+    #         desc="Pre-processed images"
+    #     ))
 
 
     # for image in tqdm(images):

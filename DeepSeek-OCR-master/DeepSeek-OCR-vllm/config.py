@@ -1,9 +1,24 @@
 # TODO: change modes
+# These are DEFAULT values used when mode is not specified dynamically.
+# You can now override these per-request using SamplingParams extra_args!
+#
+# Supported Modes:
 # Tiny: base_size = 512, image_size = 512, crop_mode = False
 # Small: base_size = 640, image_size = 640, crop_mode = False
 # Base: base_size = 1024, image_size = 1024, crop_mode = False
 # Large: base_size = 1280, image_size = 1280, crop_mode = False
 # Gundam: base_size = 1024, image_size = 640, crop_mode = True
+#
+# Dynamic Mode Usage Example:
+# sampling_params = SamplingParams(
+#     temperature=0.0,
+#     max_tokens=8192,
+#     extra_args=dict(
+#         base_size=640,      # Override to Small mode
+#         image_size=640,
+#         crop_mode=False
+#     )
+# )
 
 BASE_SIZE = 1024
 IMAGE_SIZE = 640

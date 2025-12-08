@@ -334,8 +334,23 @@ class DeepseekOCRProcessor(ProcessorMixin):
         bos: bool = True,
         eos: bool = True,
         cropping: bool = True,
+        base_size: int = None,
+        image_size: int = None,
     ):
-        """Tokenize text with <image> tags."""
+        """Tokenize text with <image> tags.
+        
+        Args:
+            images: List of PIL images to process
+            bos: Whether to add beginning of sequence token
+            eos: Whether to add end of sequence token
+            cropping: Whether to use dynamic cropping (Gundam mode)
+            base_size: Override base_size (global view size). If None, uses config.BASE_SIZE
+            image_size: Override image_size (local view size). If None, uses config.IMAGE_SIZE
+        """
+        
+        # Use provided parameters or fall back to config defaults
+        actual_base_size = base_size if base_size is not None else BASE_SIZE
+        actual_image_size = image_size if image_size is not None else IMAGE_SIZE
 
         # print(conversation)
         conversation = PROMPT
@@ -368,7 +383,7 @@ class DeepseekOCRProcessor(ProcessorMixin):
                     # best_width, best_height = select_best_resolution(image.size, self.candidate_resolutions)
                     # print('image ', image.size)
                     # print('open_size:', image.size)
-                    images_crop_raw, crop_ratio = dynamic_preprocess(image, image_size=IMAGE_SIZE)
+                    images_crop_raw, crop_ratio = dynamic_preprocess(image, image_size=actual_image_size)
                     # print('crop_ratio: ', crop_ratio)
                 else:
                     # best_width, best_height = self.image_size, self.image_size
@@ -379,11 +394,11 @@ class DeepseekOCRProcessor(ProcessorMixin):
             """process the global view"""
 
             # if cropping
-            if self.image_size <= 640 and not cropping:
+            if actual_image_size <= 640 and not cropping:
                 # print('directly resize')
-                image = image.resize((self.image_size, self.image_size))
+                image = image.resize((actual_image_size, actual_image_size))
 
-            global_view = ImageOps.pad(image, (self.base_size, self.base_size),
+            global_view = ImageOps.pad(image, (actual_base_size, actual_base_size),
                                     color=tuple(int(x * 255) for x in self.image_transform.mean))
             images_list.append(self.image_transform(global_view))
 
@@ -421,8 +436,8 @@ class DeepseekOCRProcessor(ProcessorMixin):
 
             # """add image tokens"""
             """add image tokens"""
-            num_queries = math.ceil((self.image_size // self.patch_size) / self.downsample_ratio)
-            num_queries_base = math.ceil((self.base_size // self.patch_size) / self.downsample_ratio)
+            num_queries = math.ceil((actual_image_size // self.patch_size) / self.downsample_ratio)
+            num_queries_base = math.ceil((actual_base_size // self.patch_size) / self.downsample_ratio)
 
 
             tokenized_image = ([self.image_token_id] * num_queries_base + [self.image_token_id]) * num_queries_base
@@ -482,16 +497,16 @@ class DeepseekOCRProcessor(ProcessorMixin):
             images_seq_mask = images_seq_mask[:-1]
 
         if len(images_list) == 0:
-            pixel_values = torch.zeros((1, 3, self.base_size, self.base_size))
+            pixel_values = torch.zeros((1, 3, actual_base_size, actual_base_size))
             images_spatial_crop = torch.zeros((1, 1), dtype=torch.long)
-            images_crop = torch.zeros((1, 3, self.image_size, self.image_size)).unsqueeze(0)
+            images_crop = torch.zeros((1, 3, actual_image_size, actual_image_size)).unsqueeze(0)
         else:
             pixel_values = torch.stack(images_list, dim=0)
             images_spatial_crop = torch.tensor(images_spatial_crop, dtype=torch.long)
             if images_crop_list:
                 images_crop = torch.stack(images_crop_list, dim=0).unsqueeze(0)
             else:
-                images_crop = torch.zeros((1, 3, self.image_size, self.image_size)).unsqueeze(0)
+                images_crop = torch.zeros((1, 3, actual_image_size, actual_image_size)).unsqueeze(0)
 
         input_ids = input_ids.unsqueeze(0)
 

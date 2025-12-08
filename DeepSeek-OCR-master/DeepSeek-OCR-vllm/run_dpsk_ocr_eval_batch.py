@@ -78,12 +78,37 @@ def re_match(text):
         mathes_other.append(a_match[0])
     return matches, mathes_other
 
-def process_single_image(image):
-    """single image"""
+def process_single_image(image, base_size=None, image_size=None, cropping=None):
+    """single image
+    
+    Args:
+        image: PIL Image to process
+        base_size: Override base_size (global view size). If None, uses config.BASE_SIZE
+        image_size: Override image_size (local view size). If None, uses config.IMAGE_SIZE
+        cropping: Override cropping mode. If None, uses config.CROP_MODE
+    """
     prompt_in = prompt
+    
+    # Use provided parameters or fall back to config defaults
+    actual_cropping = cropping if cropping is not None else CROP_MODE
+    
+    # Build kwargs for tokenize_with_images
+    tokenize_kwargs = {
+        'images': [image],
+        'bos': True,
+        'eos': True,
+        'cropping': actual_cropping
+    }
+    
+    # Add optional size parameters if provided
+    if base_size is not None:
+        tokenize_kwargs['base_size'] = base_size
+    if image_size is not None:
+        tokenize_kwargs['image_size'] = image_size
+    
     cache_item = {
         "prompt": prompt_in,
-        "multi_modal_data": {"image": DeepseekOCRProcessor().tokenize_with_images(images = [image], bos=True, eos=True, cropping=CROP_MODE)},
+        "multi_modal_data": {"image": DeepseekOCRProcessor().tokenize_with_images(**tokenize_kwargs)},
     }
     return cache_item
 

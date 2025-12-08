@@ -210,8 +210,25 @@ if __name__ == "__main__":
 
     
     if '<image>' in PROMPT:
-
+        # Option 1: Use config.py defaults (CROP_MODE, BASE_SIZE, IMAGE_SIZE)
         image_features = DeepseekOCRProcessor().tokenize_with_images(images = [image], bos=True, eos=True, cropping=CROP_MODE)
+        
+        # Option 2: Override mode dynamically (uncomment to use)
+        # Example modes:
+        # Tiny mode:  base_size=512, image_size=512, cropping=False
+        # Small mode: base_size=640, image_size=640, cropping=False
+        # Base mode:  base_size=1024, image_size=1024, cropping=False
+        # Large mode: base_size=1280, image_size=1280, cropping=False
+        # Gundam mode: base_size=1024, image_size=640, cropping=True
+        
+        # image_features = DeepseekOCRProcessor().tokenize_with_images(
+        #     images=[image], 
+        #     bos=True, 
+        #     eos=True, 
+        #     cropping=False,      # Set to False for Tiny/Small/Base/Large, True for Gundam
+        #     base_size=640,       # Override base_size
+        #     image_size=640       # Override image_size
+        # )
     else:
         image_features = ''
 
