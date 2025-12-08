@@ -14,7 +14,12 @@ os.environ['VLLM_USE_V1'] = '0'
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
 
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, SKIP_REPEAT, MAX_CONCURRENCY, NUM_WORKERS, CROP_MODE
+from config import (
+    MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, SKIP_REPEAT, 
+    MAX_CONCURRENCY, NUM_WORKERS, CROP_MODE,
+    NGRAM_SIZE, WINDOW_SIZE, MAX_CONSECUTIVE_REPEATS,
+    REPETITION_PENALTY_SCALE, PATTERN_DETECTION_SIZE
+)
 
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
@@ -43,7 +48,17 @@ llm = LLM(
     disable_mm_preprocessor_cache=True
 )
 
-logits_processors = [NoRepeatNGramLogitsProcessor(ngram_size=20, window_size=50, whitelist_token_ids= {128821, 128822})] #window for fast；whitelist_token_ids: <td>,</td>
+# Enhanced repetition prevention (Fix for Issue #257)
+logits_processors = [
+    NoRepeatNGramLogitsProcessor(
+        ngram_size=NGRAM_SIZE,
+        window_size=WINDOW_SIZE,
+        whitelist_token_ids={128821, 128822},  # whitelist: <td>, </td>
+        max_consecutive_repeats=MAX_CONSECUTIVE_REPEATS,
+        repetition_penalty_scale=REPETITION_PENALTY_SCALE,
+        pattern_detection_size=PATTERN_DETECTION_SIZE
+    )
+]  # window for fast；whitelist_token_ids: <td>,</td>
 
 sampling_params = SamplingParams(
     temperature=0.0,

@@ -16,6 +16,21 @@ PRINT_NUM_VIS_TOKENS = False
 SKIP_REPEAT = True
 MODEL_PATH = 'deepseek-ai/DeepSeek-OCR' # change to your model path
 
+# Repetition prevention settings (Fix for Issue #257)
+# These settings help prevent the model from generating endless repetitive output
+# especially for structured content like menus, tables, and lists
+NGRAM_SIZE = 40  # Increased from 30 to catch longer repetitive patterns
+WINDOW_SIZE = 90  # Window to search for repeated n-grams
+MAX_CONSECUTIVE_REPEATS = 3  # Maximum allowed consecutive similar patterns
+REPETITION_PENALTY_SCALE = 2.0  # Penalty multiplier for repeated patterns
+PATTERN_DETECTION_SIZE = 20  # Size of pattern to detect for repetition
+
+# Early stopping settings for repetition detection
+ENABLE_EARLY_STOPPING = True  # Enable early stopping when repetition is detected
+MAX_CONSECUTIVE_SIMILAR_LINES = 5  # Stop if more than this many similar lines in a row
+SIMILARITY_THRESHOLD = 0.7  # Threshold for considering lines similar (0-1)
+MAX_NUMBER_SEQUENCE_LENGTH = 20  # Stop if numbers increment for more than this many steps
+
 # TODO: change INPUT_PATH
 # .pdf: run_dpsk_ocr_pdf.py; 
 # .jpg, .png, .jpeg: run_dpsk_ocr_image.py; 

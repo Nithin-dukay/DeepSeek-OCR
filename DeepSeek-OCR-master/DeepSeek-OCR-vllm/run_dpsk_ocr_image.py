@@ -19,7 +19,14 @@ import numpy as np
 from tqdm import tqdm
 from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
 from process.image_process import DeepseekOCRProcessor
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, CROP_MODE
+from process.repetition_detector import RepetitionDetector
+from config import (
+    MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, CROP_MODE,
+    NGRAM_SIZE, WINDOW_SIZE, MAX_CONSECUTIVE_REPEATS, 
+    REPETITION_PENALTY_SCALE, PATTERN_DETECTION_SIZE,
+    ENABLE_EARLY_STOPPING, MAX_CONSECUTIVE_SIMILAR_LINES,
+    SIMILARITY_THRESHOLD, MAX_NUMBER_SEQUENCE_LENGTH
+)
 
 
 
@@ -159,7 +166,17 @@ async def stream_generate(image=None, prompt=''):
     )
     engine = AsyncLLMEngine.from_engine_args(engine_args)
     
-    logits_processors = [NoRepeatNGramLogitsProcessor(ngram_size=30, window_size=90, whitelist_token_ids= {128821, 128822})] #whitelist: <td>, </td> 
+    # Enhanced repetition prevention (Fix for Issue #257)
+    logits_processors = [
+        NoRepeatNGramLogitsProcessor(
+            ngram_size=NGRAM_SIZE,
+            window_size=WINDOW_SIZE,
+            whitelist_token_ids={128821, 128822},  # whitelist: <td>, </td>
+            max_consecutive_repeats=MAX_CONSECUTIVE_REPEATS,
+            repetition_penalty_scale=REPETITION_PENALTY_SCALE,
+            pattern_detection_size=PATTERN_DETECTION_SIZE
+        )
+    ] 
 
     sampling_params = SamplingParams(
         temperature=0.0,
@@ -170,9 +187,19 @@ async def stream_generate(image=None, prompt=''):
         
     )
     
+    # Initialize repetition detector for early stopping
+    repetition_detector = RepetitionDetector(
+        max_consecutive_similar_lines=MAX_CONSECUTIVE_SIMILAR_LINES,
+        similarity_threshold=SIMILARITY_THRESHOLD,
+        max_number_sequence_length=MAX_NUMBER_SEQUENCE_LENGTH,
+        enable_early_stopping=ENABLE_EARLY_STOPPING
+    )
+    
     request_id = f"request-{int(time.time())}"
 
-    printed_length = 0  
+    printed_length = 0
+    final_output = ""
+    repetition_detected = False
 
     if image and '<image>' in prompt:
         request = {
@@ -185,6 +212,7 @@ async def stream_generate(image=None, prompt=''):
         }
     else:
         assert False, f'prompt is none!!!'
+    
     async for request_output in engine.generate(
         request, sampling_params, request_id
     ):
@@ -194,7 +222,28 @@ async def stream_generate(image=None, prompt=''):
             print(new_text, end='', flush=True)
             printed_length = len(full_text)
             final_output = full_text
-    print('\n') 
+            
+            # Check for excessive repetition (early stopping)
+            if ENABLE_EARLY_STOPPING and len(full_text) > 500:
+                should_stop, reason = repetition_detector.detect_excessive_repetition(full_text)
+                if should_stop:
+                    print(f"\n\n[WARNING] Excessive repetition detected: {reason}")
+                    print("[INFO] Stopping generation early and truncating output...")
+                    repetition_detected = True
+                    # Note: We can't actually stop the async generator here,
+                    # but we'll truncate the output after generation completes
+                    break
+    
+    print('\n')
+    
+    # If repetition was detected, truncate the output
+    if repetition_detected:
+        final_output = repetition_detector.truncate_at_repetition(final_output)
+        print(f"[INFO] Output truncated to remove repetitive content")
+        
+        # Print repetition statistics
+        stats = repetition_detector.get_repetition_stats(final_output)
+        print(f"[INFO] Repetition stats: {stats}")
 
     return final_output
 

@@ -7,7 +7,11 @@ if torch.version.cuda == '11.8':
 os.environ['VLLM_USE_V1'] = '0'
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, MAX_CONCURRENCY, CROP_MODE, NUM_WORKERS
+from config import (
+    MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, MAX_CONCURRENCY, CROP_MODE, NUM_WORKERS,
+    NGRAM_SIZE, WINDOW_SIZE, MAX_CONSECUTIVE_REPEATS,
+    REPETITION_PENALTY_SCALE, PATTERN_DETECTION_SIZE
+)
 from concurrent.futures import ThreadPoolExecutor
 import glob
 from PIL import Image
@@ -34,7 +38,17 @@ llm = LLM(
     gpu_memory_utilization=0.9,
 )
 
-logits_processors = [NoRepeatNGramLogitsProcessor(ngram_size=40, window_size=90, whitelist_token_ids= {128821, 128822})] #window for fast；whitelist_token_ids: <td>,</td>
+# Enhanced repetition prevention (Fix for Issue #257)
+logits_processors = [
+    NoRepeatNGramLogitsProcessor(
+        ngram_size=NGRAM_SIZE,
+        window_size=WINDOW_SIZE,
+        whitelist_token_ids={128821, 128822},  # whitelist: <td>, </td>
+        max_consecutive_repeats=MAX_CONSECUTIVE_REPEATS,
+        repetition_penalty_scale=REPETITION_PENALTY_SCALE,
+        pattern_detection_size=PATTERN_DETECTION_SIZE
+    )
+]  # window for fast；whitelist_token_ids: <td>,</td>
 
 sampling_params = SamplingParams(
     temperature=0.0,
