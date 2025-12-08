@@ -159,13 +159,15 @@ async def stream_generate(image=None, prompt=''):
     )
     engine = AsyncLLMEngine.from_engine_args(engine_args)
     
-    logits_processors = [NoRepeatNGramLogitsProcessor(ngram_size=30, window_size=90, whitelist_token_ids= {128821, 128822})] #whitelist: <td>, </td> 
+    logits_processors = [NoRepeatNGramLogitsProcessor(ngram_size=25, window_size=80, whitelist_token_ids= {128821, 128822})] #whitelist: <td>, </td> 
 
     sampling_params = SamplingParams(
         temperature=0.0,
-        max_tokens=8192,
+        max_tokens=4096,  # Reduced from 8192 to prevent excessive generation
         logits_processors=logits_processors,
         skip_special_tokens=False,
+        stop_token_ids=[128009],  # Add EOS token to stop generation
+        repetition_penalty=1.05,  # Add slight repetition penalty to reduce hallucination
         # ignore_eos=False,
         
     )

@@ -34,13 +34,15 @@ llm = LLM(
     gpu_memory_utilization=0.9,
 )
 
-logits_processors = [NoRepeatNGramLogitsProcessor(ngram_size=40, window_size=90, whitelist_token_ids= {128821, 128822})] #window for fast；whitelist_token_ids: <td>,</td>
+logits_processors = [NoRepeatNGramLogitsProcessor(ngram_size=30, window_size=80, whitelist_token_ids= {128821, 128822})] #window for fast；whitelist_token_ids: <td>,</td>
 
 sampling_params = SamplingParams(
     temperature=0.0,
-    max_tokens=8192,
+    max_tokens=4096,  # Reduced from 8192 to prevent excessive generation
     logits_processors=logits_processors,
     skip_special_tokens=False,
+    stop_token_ids=[128009],  # Add EOS token to stop generation
+    repetition_penalty=1.05,  # Add slight repetition penalty to reduce hallucination
 )
 
 class Colors:
@@ -66,6 +68,28 @@ def clean_formula(text):
     cleaned_text = re.sub(formula_pattern, process_formula, text)
     
     return cleaned_text
+
+
+def clean_grounding_tokens(text):
+    """
+    Remove unwanted grounding tokens from the output.
+    This helps prevent hallucinated content with grounding annotations.
+    """
+    # Remove all grounding token patterns: <|ref|>...<|/ref|><|det|>...<|/det|>
+    pattern = r'<\|ref\|>.*?<\|/ref\|><\|det\|>.*?<\|/det\|>'
+    cleaned_text = re.sub(pattern, '', text, flags=re.DOTALL)
+    
+    # Remove any remaining individual grounding tokens
+    cleaned_text = cleaned_text.replace('<|ref|>', '').replace('<|/ref|>', '')
+    cleaned_text = cleaned_text.replace('<|det|>', '').replace('<|/det|>', '')
+    cleaned_text = cleaned_text.replace('<|grounding|>', '')
+    
+    # Clean up excessive newlines
+    cleaned_text = re.sub(r'\n{4,}', '\n\n', cleaned_text)
+    cleaned_text = re.sub(r'\n{3}', '\n\n', cleaned_text)
+    
+    return cleaned_text.strip()
+
 
 def re_match(text):
     pattern = r'(<\|ref\|>(.*?)<\|/ref\|><\|det\|>(.*?)<\|/det\|>)'
@@ -150,6 +174,8 @@ if __name__ == "__main__":
         with open(mmd_det_path, 'w', encoding='utf-8') as afile:
             afile.write(content)
 
+        # Apply grounding token cleaning first to reduce hallucination
+        content = clean_grounding_tokens(content)
         content = clean_formula(content)
         matches_ref, mathes_other = re_match(content)
         for idx, a_match_other in enumerate(tqdm(mathes_other, desc="other")):
