@@ -16,6 +16,11 @@ PRINT_NUM_VIS_TOKENS = False
 SKIP_REPEAT = True
 MODEL_PATH = 'deepseek-ai/DeepSeek-OCR' # change to your model path
 
+# Memory management settings for large PDF processing
+CHUNK_SIZE = 50  # Process PDF in chunks of N pages (recommended: 50-100 for large PDFs)
+CHUNKED_PROCESSING_THRESHOLD = 500  # Use chunked processing for PDFs with more than N pages
+ENABLE_MEMORY_MONITORING = True  # Enable memory usage logging
+
 # TODO: change INPUT_PATH
 # .pdf: run_dpsk_ocr_pdf.py; 
 # .jpg, .png, .jpeg: run_dpsk_ocr_image.py; 
