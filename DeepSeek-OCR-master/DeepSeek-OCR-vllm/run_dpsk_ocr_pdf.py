@@ -61,18 +61,21 @@ class Colors:
     BLUE = '\033[34m'
     RESET = '\033[0m' 
 
-def pdf_to_images_high_quality(pdf_path, dpi=144, image_format="PNG"):
+def pdf_to_images_high_quality(pdf_path, dpi=144, image_format="PNG", start_page=0, end_page=None):
     """
-    pdf2images
+    pdf2images - process pages in batches to avoid memory issues
     """
     images = []
-    
+
     pdf_document = fitz.open(pdf_path)
-    
+
+    if end_page is None:
+        end_page = pdf_document.page_count
+
     zoom = dpi / 72.0
     matrix = fitz.Matrix(zoom, zoom)
-    
-    for page_num in range(pdf_document.page_count):
+
+    for page_num in range(start_page, min(end_page, pdf_document.page_count)):
         page = pdf_document[page_num]
 
         pixmap = page.get_pixmap(matrix=matrix, alpha=False)
@@ -88,9 +91,9 @@ def pdf_to_images_high_quality(pdf_path, dpi=144, image_format="PNG"):
                 background = Image.new('RGB', img.size, (255, 255, 255))
                 background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
                 img = background
-        
+
         images.append(img)
-    
+
     pdf_document.close()
     return images
 
