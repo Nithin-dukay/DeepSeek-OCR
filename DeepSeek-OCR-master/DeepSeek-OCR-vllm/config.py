@@ -16,6 +16,11 @@ PRINT_NUM_VIS_TOKENS = False
 SKIP_REPEAT = True
 MODEL_PATH = 'deepseek-ai/DeepSeek-OCR' # change to your model path
 
+# LaTeX Formula Format Configuration (GitHub Issue #219)
+# 'markdown': Convert \(...\) to $...$ and \[...\] to $...$
+# 'tags': Convert to <|math|>...<|/math|> special tags
+LATEX_FORMAT = 'markdown'  # Options: 'markdown' or 'tags'
+
 # TODO: change INPUT_PATH
 # .pdf: run_dpsk_ocr_pdf.py; 
 # .jpg, .png, .jpeg: run_dpsk_ocr_image.py; 

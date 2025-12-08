@@ -7,7 +7,7 @@ if torch.version.cuda == '11.8':
 os.environ['VLLM_USE_V1'] = '0'
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, MAX_CONCURRENCY, CROP_MODE, NUM_WORKERS
+from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, MAX_CONCURRENCY, CROP_MODE, NUM_WORKERS, LATEX_FORMAT
 from concurrent.futures import ThreadPoolExecutor
 import glob
 from PIL import Image
@@ -18,6 +18,7 @@ from vllm.model_executor.models.registry import ModelRegistry
 from vllm import LLM, SamplingParams
 from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
 from process.image_process import DeepseekOCRProcessor
+from process.latex_utils import process_model_output
 ModelRegistry.register_model("DeepseekOCRForCausalLM", DeepseekOCRForCausalLM)
 
 
@@ -150,7 +151,9 @@ if __name__ == "__main__":
         with open(mmd_det_path, 'w', encoding='utf-8') as afile:
             afile.write(content)
 
-        content = clean_formula(content)
+        # Process LaTeX formulas (GitHub Issue #219)
+        content = process_model_output(content, latex_format=LATEX_FORMAT, clean_formulas=True)
+        
         matches_ref, mathes_other = re_match(content)
         for idx, a_match_other in enumerate(tqdm(mathes_other, desc="other")):
             content = content.replace(a_match_other, '').replace('\n\n\n\n', '\n\n').replace('\n\n\n', '\n\n').replace('<center>', '').replace('</center>', '')

@@ -19,7 +19,8 @@ import numpy as np
 from tqdm import tqdm
 from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
 from process.image_process import DeepseekOCRProcessor
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, CROP_MODE
+from process.latex_utils import process_model_output
+from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, CROP_MODE, LATEX_FORMAT
 
 
 
@@ -231,6 +232,9 @@ if __name__ == "__main__":
 
         with open(f'{OUTPUT_PATH}/result_ori.mmd', 'w', encoding = 'utf-8') as afile:
             afile.write(outputs)
+
+        # Process LaTeX formulas (GitHub Issue #219)
+        outputs = process_model_output(outputs, latex_format=LATEX_FORMAT, clean_formulas=True)
 
         matches_ref, matches_images, mathes_other = re_match(outputs)
         # print(matches_ref)
