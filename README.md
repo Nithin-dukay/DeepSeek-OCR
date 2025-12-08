@@ -57,6 +57,7 @@
 
 ## Contents
 - [Install](#install)
+- [Windows 11 Setup](#windows-11-setup) 🪟
 - [vLLM Inference](#vllm-inference)
 - [Transformers Inference](#transformers-inference)
   
@@ -85,6 +86,68 @@ pip install -r requirements.txt
 pip install flash-attn==2.7.3 --no-build-isolation
 ```
 **Note:** if you want vLLM and transformers codes to run in the same environment, you don't need to worry about this installation error like: vllm 0.8.5+cu118 requires transformers>=4.51.1
+
+## Windows 11 Setup
+
+**⚠️ Important for Windows Users:**
+
+Flash-attention is **not compatible** with Windows or older GPUs (like RTX 1060 with compute capability < 7.5). 
+
+### Quick Start for Windows
+
+1. **Check your system:**
+   ```bash
+   python examples/check_system.py
+   ```
+
+2. **Use alternative attention modes:**
+   - **SDPA (Recommended)**: `attn_implementation='sdpa'`
+   - **Eager (Most Compatible)**: `attn_implementation='eager'`
+   - **Do NOT use**: `attn_implementation='flash_attention_2'`
+
+3. **Run example scripts:**
+   ```bash
+   # For GPU (RTX 1060 and similar)
+   python examples/run_windows_gpu_sdpa.py
+   
+   # For CPU only (slow but works)
+   python examples/run_windows_cpu.py
+   ```
+
+### Example Code for Windows
+
+```python
+from transformers import AutoModel, AutoTokenizer
+import torch
+
+model_name = 'deepseek-ai/DeepSeek-OCR'
+tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+
+# Use SDPA instead of flash_attention_2
+model = AutoModel.from_pretrained(
+    model_name, 
+    attn_implementation='sdpa',  # or 'eager'
+    trust_remote_code=True, 
+    use_safetensors=True,
+    torch_dtype=torch.float16  # Use float16 for older GPUs
+)
+
+model = model.eval().cuda()
+
+# Use smaller settings for limited VRAM (RTX 1060: 6GB)
+res = model.infer(
+    tokenizer, 
+    prompt="<image>\n<|grounding|>Convert the document to markdown.",
+    image_file='test.png',
+    output_path='output',
+    base_size=640,      # Small mode
+    image_size=640,
+    crop_mode=False,    # Disable to save memory
+    save_results=True
+)
+```
+
+📖 **Detailed Guide**: See [WINDOWS_SETUP.md](WINDOWS_SETUP.md) for complete installation instructions, troubleshooting, and optimization tips.
 
 ## vLLM-Inference
 - VLLM:
