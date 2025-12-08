@@ -38,6 +38,15 @@
   <a href="https://arxiv.org/abs/2510.18234"><b>📄 Arxiv Paper Link</b></a> |
 </p>
 
+## Community
+Join our community for discussions, support, and updates on DeepSeek-OCR:
+- **Discord**: [Join the DeepSeek AI Discord Server](https://discord.gg/Tc7c45Zzu5) (primary community channel).
+- **GitHub Discussions**: [Repository Discussions](https://github.com/deepseek-ai/DeepSeek-OCR/discussions).
+- **Hugging Face Discussions**: [Model Discussions](https://huggingface.co/deepseek-ai/DeepSeek-OCR/discussions).
+- **Twitter**: Follow [@deepseek_ai](https://twitter.com/deepseek_ai) for announcements.
+
+**Note**: Unofficial WeChat groups may expire and are not officially supported. Please use our official channels above for reliable community interactions.
+
 <h2>
 <p align="center">
   <a href="">DeepSeek-OCR: Contexts Optical Compression</a>
