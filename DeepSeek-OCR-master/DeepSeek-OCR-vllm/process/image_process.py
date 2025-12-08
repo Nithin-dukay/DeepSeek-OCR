@@ -66,20 +66,59 @@ def dynamic_preprocess(image, min_num=MIN_CROPS, max_num=MAX_CROPS, image_size=6
     # resize the image
     resized_img = image.resize((target_width, target_height))
     processed_images = []
+    
+    # Calculate number of tiles in each dimension
+    num_width_tiles = target_aspect_ratio[0]
+    num_height_tiles = target_aspect_ratio[1]
+    
     for i in range(blocks):
-        box = (
-            (i % (target_width // image_size)) * image_size,
-            (i // (target_width // image_size)) * image_size,
-            ((i % (target_width // image_size)) + 1) * image_size,
-            ((i // (target_width // image_size)) + 1) * image_size
-        )
-        # split the image
-        split_img = resized_img.crop(box)
-        processed_images.append(split_img)
-    assert len(processed_images) == blocks
+        # Calculate tile position using proper indexing
+        tile_x = i % num_width_tiles
+        tile_y = i // num_width_tiles
+        
+        # Calculate box coordinates with boundary validation
+        x1 = tile_x * image_size
+        y1 = tile_y * image_size
+        x2 = min((tile_x + 1) * image_size, target_width)
+        y2 = min((tile_y + 1) * image_size, target_height)
+        
+        # Ensure box coordinates are valid
+        if x1 >= target_width or y1 >= target_height or x1 >= x2 or y1 >= y2:
+            # Skip invalid boxes and log warning
+            print(f"Warning: Invalid box coordinates ({x1}, {y1}, {x2}, {y2}) for image size ({target_width}, {target_height})")
+            continue
+            
+        box = (x1, y1, x2, y2)
+        
+        try:
+            # split the image
+            split_img = resized_img.crop(box)
+            # Ensure the cropped image has the expected size
+            if split_img.size[0] > 0 and split_img.size[1] > 0:
+                # Resize to exact image_size if needed (for edge tiles)
+                if split_img.size != (image_size, image_size):
+                    split_img = split_img.resize((image_size, image_size))
+                processed_images.append(split_img)
+            else:
+                print(f"Warning: Empty crop at box {box}")
+        except Exception as e:
+            print(f"Error cropping image at box {box}: {e}")
+            continue
+    
+    # Validate we got the expected number of blocks
+    if len(processed_images) != blocks:
+        print(f"Warning: Expected {blocks} blocks but got {len(processed_images)}")
+    
+    # Ensure we have at least one processed image
+    if len(processed_images) == 0:
+        print("Error: No valid crops produced, using full image as fallback")
+        processed_images = [image.resize((image_size, image_size))]
+        target_aspect_ratio = (1, 1)
+    
     if use_thumbnail and len(processed_images) != 1:
         thumbnail_img = image.resize((image_size, image_size))
         processed_images.append(thumbnail_img)
+    
     return processed_images, target_aspect_ratio
 
 
@@ -360,6 +399,9 @@ class DeepseekOCRProcessor(ProcessorMixin):
 
             image_shapes.append(image.size)
 
+            # Initialize images_crop_raw to empty list by default
+            images_crop_raw = []
+            
             if image.size[0] <= 640 and image.size[1] <= 640:
                 crop_ratio = [1, 1]
             else:
@@ -368,7 +410,18 @@ class DeepseekOCRProcessor(ProcessorMixin):
                     # best_width, best_height = select_best_resolution(image.size, self.candidate_resolutions)
                     # print('image ', image.size)
                     # print('open_size:', image.size)
-                    images_crop_raw, crop_ratio = dynamic_preprocess(image, image_size=IMAGE_SIZE)
+                    try:
+                        images_crop_raw, crop_ratio = dynamic_preprocess(image, image_size=IMAGE_SIZE)
+                        # Validate crop_ratio
+                        if not images_crop_raw or len(images_crop_raw) == 0:
+                            print(f"Warning: dynamic_preprocess returned empty crops for image size {image.size}, falling back to no cropping")
+                            crop_ratio = [1, 1]
+                            images_crop_raw = []
+                    except Exception as e:
+                        print(f"Error in dynamic_preprocess for image size {image.size}: {e}")
+                        print("Falling back to no cropping")
+                        crop_ratio = [1, 1]
+                        images_crop_raw = []
                     # print('crop_ratio: ', crop_ratio)
                 else:
                     # best_width, best_height = self.image_size, self.image_size
@@ -403,8 +456,18 @@ class DeepseekOCRProcessor(ProcessorMixin):
                 #     for j in range(0, best_width, self.image_size):
                 #         images_crop_list.append(
                 #             self.image_transform(local_view.crop((j, i, j + self.image_size, i + self.image_size))))
-                for i in range(len(images_crop_raw)):
-                    images_crop_list.append(self.image_transform(images_crop_raw[i]))
+                if images_crop_raw and len(images_crop_raw) > 0:
+                    for i in range(len(images_crop_raw)):
+                        try:
+                            images_crop_list.append(self.image_transform(images_crop_raw[i]))
+                        except Exception as e:
+                            print(f"Error transforming crop {i}: {e}")
+                            continue
+                else:
+                    print(f"Warning: Expected crops for tiles {num_width_tiles}x{num_height_tiles} but images_crop_raw is empty")
+                    # Reset to no cropping if crops are missing
+                    num_width_tiles = num_height_tiles = 1
+                    images_spatial_crop[-1] = [1, 1]
 
             # """process the global view"""
             # global_view = ImageOps.pad(image, (self.image_size, self.image_size),
