@@ -19,7 +19,7 @@ import numpy as np
 from tqdm import tqdm
 from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
 from process.image_process import DeepseekOCRProcessor
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, CROP_MODE
+from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, CROP_MODE, NGRAM_SIZE, NGRAM_WINDOW_SIZE, DISABLE_NGRAM_FILTER
 
 
 
@@ -159,7 +159,17 @@ async def stream_generate(image=None, prompt=''):
     )
     engine = AsyncLLMEngine.from_engine_args(engine_args)
     
-    logits_processors = [NoRepeatNGramLogitsProcessor(ngram_size=30, window_size=90, whitelist_token_ids= {128821, 128822})] #whitelist: <td>, </td> 
+    # Configure n-gram filter based on config settings
+    if DISABLE_NGRAM_FILTER:
+        logits_processors = []  # No filtering
+        print("N-gram filtering disabled")
+    else:
+        logits_processors = [NoRepeatNGramLogitsProcessor(
+            ngram_size=NGRAM_SIZE, 
+            window_size=NGRAM_WINDOW_SIZE, 
+            whitelist_token_ids={128821, 128822}  # whitelist: <td>, </td>
+        )]
+        print(f"N-gram filter: size={NGRAM_SIZE}, window={NGRAM_WINDOW_SIZE}")
 
     sampling_params = SamplingParams(
         temperature=0.0,

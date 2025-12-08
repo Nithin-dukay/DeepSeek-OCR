@@ -16,6 +16,16 @@ PRINT_NUM_VIS_TOKENS = False
 SKIP_REPEAT = True
 MODEL_PATH = 'deepseek-ai/DeepSeek-OCR' # change to your model path
 
+# TODO: N-gram repetition filter settings
+# These parameters control the no-repeat n-gram logits processor to prevent repetitive output
+# For documents with sparse text or when experiencing partial recognition issues:
+# - Increase NGRAM_WINDOW_SIZE (e.g., 150-200) to allow more context
+# - Decrease NGRAM_SIZE (e.g., 20-25) to be less restrictive
+# - Set DISABLE_NGRAM_FILTER = True to completely disable filtering (use with caution)
+NGRAM_SIZE = 30  # Size of n-gram to check for repetition (default: 30)
+NGRAM_WINDOW_SIZE = 90  # Window size to search for repeated n-grams (default: 90)
+DISABLE_NGRAM_FILTER = False  # Set to True to disable n-gram filtering entirely
+
 # TODO: change INPUT_PATH
 # .pdf: run_dpsk_ocr_pdf.py; 
 # .jpg, .png, .jpeg: run_dpsk_ocr_image.py; 

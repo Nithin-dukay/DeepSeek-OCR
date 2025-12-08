@@ -14,7 +14,7 @@ os.environ['VLLM_USE_V1'] = '0'
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
 
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, SKIP_REPEAT, MAX_CONCURRENCY, NUM_WORKERS, CROP_MODE
+from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, SKIP_REPEAT, MAX_CONCURRENCY, NUM_WORKERS, CROP_MODE, NGRAM_SIZE, NGRAM_WINDOW_SIZE, DISABLE_NGRAM_FILTER
 
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
@@ -43,7 +43,21 @@ llm = LLM(
     disable_mm_preprocessor_cache=True
 )
 
-logits_processors = [NoRepeatNGramLogitsProcessor(ngram_size=20, window_size=50, whitelist_token_ids= {128821, 128822})] #window for fast；whitelist_token_ids: <td>,</td>
+# Configure n-gram filter based on config settings
+if DISABLE_NGRAM_FILTER:
+    logits_processors = []  # No filtering
+    print("N-gram filtering disabled")
+else:
+    # Note: PDF processing uses slightly different defaults (ngram_size=20, window_size=50) for faster processing
+    # You can override by changing NGRAM_SIZE and NGRAM_WINDOW_SIZE in config.py
+    pdf_ngram_size = min(NGRAM_SIZE, 20) if NGRAM_SIZE == 30 else NGRAM_SIZE  # Use 20 for default, otherwise use config
+    pdf_window_size = min(NGRAM_WINDOW_SIZE, 50) if NGRAM_WINDOW_SIZE == 90 else NGRAM_WINDOW_SIZE  # Use 50 for default, otherwise use config
+    logits_processors = [NoRepeatNGramLogitsProcessor(
+        ngram_size=pdf_ngram_size, 
+        window_size=pdf_window_size, 
+        whitelist_token_ids={128821, 128822}  # whitelist_token_ids: <td>,</td>
+    )]
+    print(f"N-gram filter (PDF): size={pdf_ngram_size}, window={pdf_window_size}")
 
 sampling_params = SamplingParams(
     temperature=0.0,

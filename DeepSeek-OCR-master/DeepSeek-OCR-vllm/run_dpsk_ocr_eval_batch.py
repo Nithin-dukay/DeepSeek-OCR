@@ -7,7 +7,7 @@ if torch.version.cuda == '11.8':
 os.environ['VLLM_USE_V1'] = '0'
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, MAX_CONCURRENCY, CROP_MODE, NUM_WORKERS
+from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, MAX_CONCURRENCY, CROP_MODE, NUM_WORKERS, NGRAM_SIZE, NGRAM_WINDOW_SIZE, DISABLE_NGRAM_FILTER
 from concurrent.futures import ThreadPoolExecutor
 import glob
 from PIL import Image
@@ -34,7 +34,20 @@ llm = LLM(
     gpu_memory_utilization=0.9,
 )
 
-logits_processors = [NoRepeatNGramLogitsProcessor(ngram_size=40, window_size=90, whitelist_token_ids= {128821, 128822})] #window for fast；whitelist_token_ids: <td>,</td>
+# Configure n-gram filter based on config settings
+if DISABLE_NGRAM_FILTER:
+    logits_processors = []  # No filtering
+    print("N-gram filtering disabled")
+else:
+    # Note: Batch eval uses ngram_size=40 by default for stricter filtering
+    # You can override by changing NGRAM_SIZE in config.py
+    eval_ngram_size = max(NGRAM_SIZE, 40) if NGRAM_SIZE == 30 else NGRAM_SIZE  # Use 40 for default, otherwise use config
+    logits_processors = [NoRepeatNGramLogitsProcessor(
+        ngram_size=eval_ngram_size, 
+        window_size=NGRAM_WINDOW_SIZE, 
+        whitelist_token_ids={128821, 128822}  # whitelist_token_ids: <td>,</td>
+    )]
+    print(f"N-gram filter (Batch Eval): size={eval_ngram_size}, window={NGRAM_WINDOW_SIZE}")
 
 sampling_params = SamplingParams(
     temperature=0.0,
