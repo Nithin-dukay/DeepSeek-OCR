@@ -388,6 +388,10 @@ class DeepseekOCRForCausalLM(nn.Module, SupportsMultiModal, SupportsPP):
                 image_ori = pixel_values[jdx]
                 crop_shape = images_spatial_crop[jdx][0]
 
+                if crop_shape.sum().item() == 0:
+                    images_in_this_batch.append(None)
+                    continue
+
                 if torch.sum(patches).item() != 0:  # if all values = 0, no crop
                     # P, C, H, W = patches.shape
                     # crop_flag = 1
