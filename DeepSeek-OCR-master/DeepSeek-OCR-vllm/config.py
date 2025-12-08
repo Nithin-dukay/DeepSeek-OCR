@@ -26,15 +26,67 @@ OUTPUT_PATH = ''
 
 PROMPT = '<image>\n<|grounding|>Convert the document to markdown.'
 # PROMPT = '<image>\nFree OCR.'
-# TODO commonly used prompts
-# document: <image>\n<|grounding|>Convert the document to markdown.
-# other image: <image>\n<|grounding|>OCR this image.
-# without layouts: <image>\nFree OCR.
-# figures in document: <image>\nParse the figure.
-# general: <image>\nDescribe this image in detail.
-# rec: <image>\nLocate <|ref|>xxxx<|/ref|> in the image.
-# '先天下之忧而忧'
-# .......
+
+# ============================================================================
+# PROMPT FORMATTING GUIDELINES
+# ============================================================================
+# The model is sensitive to prompt formatting. For best results:
+#
+# 1. KEEP PROMPTS SIMPLE AND DIRECT
+#    - Use concise, single-sentence instructions
+#    - Avoid complex clauses or multiple instructions
+#    - Avoid negative instructions (e.g., "don't add extra space")
+#
+# 2. USE RECOMMENDED PROMPT PATTERNS
+#    The following prompts are tested and optimized:
+#
+#    Document OCR (with layout):
+#      '<image>\n<|grounding|>Convert the document to markdown.'
+#
+#    Image OCR (with layout):
+#      '<image>\n<|grounding|>OCR this image.'
+#
+#    Free OCR (without layout):
+#      '<image>\nFree OCR.'
+#
+#    Figure/Chart parsing:
+#      '<image>\nParse the figure.'
+#
+#    General description:
+#      '<image>\nDescribe this image in detail.'
+#
+#    Recognition/Localization:
+#      '<image>\nLocate <|ref|>text_to_find<|/ref|> in the image.'
+#
+# 3. SPECIAL TOKENS
+#    - <image>: Required at the start of every prompt
+#    - <|grounding|>: Use for layout-aware OCR tasks
+#    - <|ref|>...<|/ref|>: Use for text localization tasks
+#
+# 4. AVOID PROBLEMATIC PATTERNS
+#    - Multiple comma-separated clauses
+#    - Negative instructions ("don't", "without", "no extra")
+#    - Overly specific formatting requirements
+#    - Instructions longer than 2-3 sentences
+#
+# 5. PROMPT VALIDATION
+#    Enable automatic prompt validation by setting VALIDATE_PROMPTS = True
+#    This will check and sanitize prompts before inference.
+# ============================================================================
+
+# Enable automatic prompt validation and sanitization
+VALIDATE_PROMPTS = True
+
+# N-gram repetition prevention settings
+# These settings help prevent the model from generating repetitive output
+NGRAM_SIZE = 30          # Size of n-grams to check (smaller = stricter)
+NGRAM_WINDOW = 90        # Window size for checking repetitions
+NGRAM_ADAPTIVE = True    # Enable adaptive parameter adjustment
+NGRAM_REPETITION_THRESHOLD = 3  # Max times a pattern can repeat
+
+# Whitelist token IDs that are allowed to repeat
+# 128821 and 128822 are special tokens for the model
+NGRAM_WHITELIST = {128821, 128822}
 
 
 from transformers import AutoTokenizer

@@ -19,7 +19,10 @@ import numpy as np
 from tqdm import tqdm
 from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
 from process.image_process import DeepseekOCRProcessor
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, CROP_MODE
+from config import (MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, CROP_MODE,
+                    VALIDATE_PROMPTS, NGRAM_SIZE, NGRAM_WINDOW, NGRAM_ADAPTIVE,
+                    NGRAM_REPETITION_THRESHOLD, NGRAM_WHITELIST)
+from prompt_validator import validate_prompt
 
 
 
@@ -159,7 +162,16 @@ async def stream_generate(image=None, prompt=''):
     )
     engine = AsyncLLMEngine.from_engine_args(engine_args)
     
-    logits_processors = [NoRepeatNGramLogitsProcessor(ngram_size=30, window_size=90, whitelist_token_ids= {128821, 128822})] #whitelist: <td>, </td> 
+    # Use enhanced n-gram processor with adaptive parameters
+    logits_processors = [
+        NoRepeatNGramLogitsProcessor(
+            ngram_size=NGRAM_SIZE,
+            window_size=NGRAM_WINDOW,
+            whitelist_token_ids=NGRAM_WHITELIST,
+            adaptive=NGRAM_ADAPTIVE,
+            repetition_threshold=NGRAM_REPETITION_THRESHOLD
+        )
+    ]  # whitelist: <td>, </td> 
 
     sampling_params = SamplingParams(
         temperature=0.0,
@@ -208,14 +220,20 @@ if __name__ == "__main__":
 
     image = load_image(INPUT_PATH).convert('RGB')
 
+    # Validate and sanitize prompt if enabled
+    prompt = PROMPT
+    if VALIDATE_PROMPTS:
+        print(f"[Prompt Validation] Original prompt: {prompt}")
+        prompt, is_valid = validate_prompt(prompt, strict_mode=False)
+        if not is_valid:
+            print(f"[Prompt Validation] Sanitized prompt: {prompt}")
+        else:
+            print(f"[Prompt Validation] Prompt is valid")
     
-    if '<image>' in PROMPT:
-
+    if '<image>' in prompt:
         image_features = DeepseekOCRProcessor().tokenize_with_images(images = [image], bos=True, eos=True, cropping=CROP_MODE)
     else:
         image_features = ''
-
-    prompt = PROMPT
 
     result_out = asyncio.run(stream_generate(image_features, prompt))
 

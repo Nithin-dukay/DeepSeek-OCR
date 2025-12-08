@@ -14,7 +14,10 @@ os.environ['VLLM_USE_V1'] = '0'
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
 
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, SKIP_REPEAT, MAX_CONCURRENCY, NUM_WORKERS, CROP_MODE
+from config import (MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, SKIP_REPEAT, 
+                    MAX_CONCURRENCY, NUM_WORKERS, CROP_MODE, VALIDATE_PROMPTS,
+                    NGRAM_SIZE, NGRAM_WINDOW, NGRAM_ADAPTIVE, 
+                    NGRAM_REPETITION_THRESHOLD, NGRAM_WHITELIST)
 
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
@@ -25,6 +28,7 @@ from vllm.model_executor.models.registry import ModelRegistry
 from vllm import LLM, SamplingParams
 from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
 from process.image_process import DeepseekOCRProcessor
+from prompt_validator import validate_prompt
 
 ModelRegistry.register_model("DeepseekOCRForCausalLM", DeepseekOCRForCausalLM)
 
@@ -43,7 +47,15 @@ llm = LLM(
     disable_mm_preprocessor_cache=True
 )
 
-logits_processors = [NoRepeatNGramLogitsProcessor(ngram_size=20, window_size=50, whitelist_token_ids= {128821, 128822})] #window for fast；whitelist_token_ids: <td>,</td>
+logits_processors = [
+    NoRepeatNGramLogitsProcessor(
+        ngram_size=NGRAM_SIZE,
+        window_size=NGRAM_WINDOW,
+        whitelist_token_ids=NGRAM_WHITELIST,
+        adaptive=NGRAM_ADAPTIVE,
+        repetition_threshold=NGRAM_REPETITION_THRESHOLD
+    )
+]  # Enhanced n-gram processor with adaptive parameters
 
 sampling_params = SamplingParams(
     temperature=0.0,
