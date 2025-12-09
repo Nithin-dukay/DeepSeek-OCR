@@ -269,10 +269,15 @@ class DeepseekOCRProcessor(ProcessorMixin):
 
         sft_format = prompt
 
-        input_ids, pixel_values, images_crop, images_seq_mask, images_spatial_crop, num_image_tokens, _ = images[0]
+        # Handle both old format (7 elements) and new format (8 elements with mode_params)
+        if len(images[0]) == 8:
+            input_ids, pixel_values, images_crop, images_seq_mask, images_spatial_crop, num_image_tokens, _, mode_params = images[0]
+        else:
+            input_ids, pixel_values, images_crop, images_seq_mask, images_spatial_crop, num_image_tokens, _ = images[0]
+            mode_params = None
 
 
-        return {
+        result = {
             "input_ids": input_ids,
             "pixel_values": pixel_values,
             "images_crop": images_crop,
@@ -280,6 +285,12 @@ class DeepseekOCRProcessor(ProcessorMixin):
             "images_spatial_crop": images_spatial_crop,
             "num_image_tokens": num_image_tokens,
         }
+        
+        # Include mode_params if available
+        if mode_params is not None:
+            result["mode_params"] = mode_params
+        
+        return result
 
 
         # prepare = BatchFeature(
@@ -334,8 +345,35 @@ class DeepseekOCRProcessor(ProcessorMixin):
         bos: bool = True,
         eos: bool = True,
         cropping: bool = True,
+        base_size: int = None,
+        image_size: int = None,
+        crop_mode: bool = None,
     ):
-        """Tokenize text with <image> tags."""
+        """Tokenize text with <image> tags.
+        
+        Args:
+            images: List of PIL images
+            bos: Add beginning of sentence token
+            eos: Add end of sentence token
+            cropping: Use cropping (deprecated, use crop_mode instead)
+            base_size: Base resolution for global view (e.g., 512, 640, 1024, 1280)
+            image_size: Tile resolution for local views (e.g., 512, 640, 1024, 1280)
+            crop_mode: Enable dynamic cropping for Gundam mode
+        """
+        # Use provided parameters or fall back to config/instance defaults
+        if base_size is None:
+            base_size = self.base_size
+        if image_size is None:
+            image_size = self.image_size
+        if crop_mode is None:
+            crop_mode = cropping  # backward compatibility
+        
+        # Store mode parameters for later use
+        mode_params = {
+            'base_size': base_size,
+            'image_size': image_size,
+            'crop_mode': crop_mode
+        }
 
         # print(conversation)
         conversation = PROMPT
@@ -363,12 +401,12 @@ class DeepseekOCRProcessor(ProcessorMixin):
             if image.size[0] <= 640 and image.size[1] <= 640:
                 crop_ratio = [1, 1]
             else:
-                if cropping:
+                if crop_mode:
                     # print('image-size: ', image.size)
                     # best_width, best_height = select_best_resolution(image.size, self.candidate_resolutions)
                     # print('image ', image.size)
                     # print('open_size:', image.size)
-                    images_crop_raw, crop_ratio = dynamic_preprocess(image, image_size=IMAGE_SIZE)
+                    images_crop_raw, crop_ratio = dynamic_preprocess(image, image_size=image_size)
                     # print('crop_ratio: ', crop_ratio)
                 else:
                     # best_width, best_height = self.image_size, self.image_size
@@ -379,11 +417,11 @@ class DeepseekOCRProcessor(ProcessorMixin):
             """process the global view"""
 
             # if cropping
-            if self.image_size <= 640 and not cropping:
+            if image_size <= 640 and not crop_mode:
                 # print('directly resize')
-                image = image.resize((self.image_size, self.image_size))
+                image = image.resize((image_size, image_size))
 
-            global_view = ImageOps.pad(image, (self.base_size, self.base_size),
+            global_view = ImageOps.pad(image, (base_size, base_size),
                                     color=tuple(int(x * 255) for x in self.image_transform.mean))
             images_list.append(self.image_transform(global_view))
 
@@ -421,8 +459,8 @@ class DeepseekOCRProcessor(ProcessorMixin):
 
             # """add image tokens"""
             """add image tokens"""
-            num_queries = math.ceil((self.image_size // self.patch_size) / self.downsample_ratio)
-            num_queries_base = math.ceil((self.base_size // self.patch_size) / self.downsample_ratio)
+            num_queries = math.ceil((image_size // self.patch_size) / self.downsample_ratio)
+            num_queries_base = math.ceil((base_size // self.patch_size) / self.downsample_ratio)
 
 
             tokenized_image = ([self.image_token_id] * num_queries_base + [self.image_token_id]) * num_queries_base
@@ -482,21 +520,21 @@ class DeepseekOCRProcessor(ProcessorMixin):
             images_seq_mask = images_seq_mask[:-1]
 
         if len(images_list) == 0:
-            pixel_values = torch.zeros((1, 3, self.base_size, self.base_size))
+            pixel_values = torch.zeros((1, 3, base_size, base_size))
             images_spatial_crop = torch.zeros((1, 1), dtype=torch.long)
-            images_crop = torch.zeros((1, 3, self.image_size, self.image_size)).unsqueeze(0)
+            images_crop = torch.zeros((1, 3, image_size, image_size)).unsqueeze(0)
         else:
             pixel_values = torch.stack(images_list, dim=0)
             images_spatial_crop = torch.tensor(images_spatial_crop, dtype=torch.long)
             if images_crop_list:
                 images_crop = torch.stack(images_crop_list, dim=0).unsqueeze(0)
             else:
-                images_crop = torch.zeros((1, 3, self.image_size, self.image_size)).unsqueeze(0)
+                images_crop = torch.zeros((1, 3, image_size, image_size)).unsqueeze(0)
 
         input_ids = input_ids.unsqueeze(0)
 
-        
-        return [[input_ids, pixel_values, images_crop, images_seq_mask, images_spatial_crop, num_image_tokens, image_shapes]]
+        # Include mode parameters in the return value for vLLM to use
+        return [[input_ids, pixel_values, images_crop, images_seq_mask, images_spatial_crop, num_image_tokens, image_shapes, mode_params]]
 
 
 AutoProcessor.register("DeepseekVLV2Processor", DeepseekOCRProcessor)

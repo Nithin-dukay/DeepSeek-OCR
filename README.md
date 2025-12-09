@@ -89,9 +89,12 @@ pip install flash-attn==2.7.3 --no-build-isolation
 ## vLLM-Inference
 - VLLM:
 >**Note:** change the INPUT_PATH/OUTPUT_PATH and other settings in the DeepSeek-OCR-master/DeepSeek-OCR-vllm/config.py
+
 ```Shell
 cd DeepSeek-OCR-master/DeepSeek-OCR-vllm
 ```
+
+### Basic Usage (Config-based Mode Selection)
 1. image: streaming output
 ```Shell
 python run_dpsk_ocr_image.py
@@ -103,6 +106,68 @@ python run_dpsk_ocr_pdf.py
 3. batch eval for benchmarks
 ```Shell
 python run_dpsk_ocr_eval_batch.py
+```
+
+### Dynamic Mode Selection (New!)
+You can now dynamically select different modes (Tiny, Small, Base, Large, Gundam) per request without modifying config.py:
+
+**Image processing with mode selection:**
+```Shell
+# Tiny mode (512x512, 64 vision tokens)
+python run_dpsk_ocr_image_with_mode.py --image your_image.jpg --mode tiny --output ./output --save-results
+
+# Small mode (640x640, 100 vision tokens)
+python run_dpsk_ocr_image_with_mode.py --image your_image.jpg --mode small --output ./output --save-results
+
+# Base mode (1024x1024, 256 vision tokens)
+python run_dpsk_ocr_image_with_mode.py --image your_image.jpg --mode base --output ./output --save-results
+
+# Large mode (1280x1280, 400 vision tokens)
+python run_dpsk_ocr_image_with_mode.py --image your_image.jpg --mode large --output ./output --save-results
+
+# Gundam mode (dynamic cropping, n×100 + 256 tokens)
+python run_dpsk_ocr_image_with_mode.py --image your_image.jpg --mode gundam --output ./output --save-results
+```
+
+**PDF processing with mode selection:**
+```Shell
+# Process PDF with Gundam mode
+python run_dpsk_ocr_pdf_with_mode.py --pdf your_document.pdf --mode gundam --output ./output
+
+# Process PDF with Base mode
+python run_dpsk_ocr_pdf_with_mode.py --pdf your_document.pdf --mode base --output ./output
+```
+
+**Programmatic usage:**
+```python
+from process.image_process import DeepseekOCRProcessor
+from PIL import Image
+
+# Load image
+image = Image.open("your_image.jpg").convert('RGB')
+
+# Process with different modes
+processor = DeepseekOCRProcessor()
+
+# Tiny mode
+image_features_tiny = processor.tokenize_with_images(
+    images=[image], 
+    bos=True, 
+    eos=True, 
+    base_size=512,
+    image_size=512,
+    crop_mode=False
+)
+
+# Gundam mode
+image_features_gundam = processor.tokenize_with_images(
+    images=[image], 
+    bos=True, 
+    eos=True, 
+    base_size=1024,
+    image_size=640,
+    crop_mode=True
+)
 ```
 
 **[2025/10/23] The version of upstream [vLLM](https://docs.vllm.ai/projects/recipes/en/latest/DeepSeek/DeepSeek-OCR.html#installing-vllm):**
@@ -195,6 +260,40 @@ The current open-source model supports the following modes:
   - Large: 1280×1280 （400 vision tokens）✅
 - Dynamic resolution
   - Gundam: n×640×640 + 1×1024×1024 ✅
+
+### Mode Selection Guide
+
+**When to use each mode:**
+
+| Mode | Resolution | Vision Tokens | Best For | Speed | Quality |
+|------|-----------|---------------|----------|-------|---------|
+| **Tiny** | 512×512 | 64 | Quick previews, simple text | ⚡⚡⚡⚡ | ⭐⭐ |
+| **Small** | 640×640 | 100 | Simple documents, receipts | ⚡⚡⚡ | ⭐⭐⭐ |
+| **Base** | 1024×1024 | 256 | Standard documents, forms | ⚡⚡ | ⭐⭐⭐⭐ |
+| **Large** | 1280×1280 | 400 | High-quality documents | ⚡ | ⭐⭐⭐⭐⭐ |
+| **Gundam** | Dynamic | 256 + n×100 | Large documents, complex layouts | ⚡ | ⭐⭐⭐⭐⭐ |
+
+**vLLM Mode Selection:**
+- **Config-based (Traditional):** Edit `config.py` to set `BASE_SIZE`, `IMAGE_SIZE`, and `CROP_MODE` globally
+- **Dynamic (New):** Pass `base_size`, `image_size`, and `crop_mode` parameters per request using the new scripts
+
+**Example mode configurations:**
+```python
+# Tiny mode
+base_size=512, image_size=512, crop_mode=False
+
+# Small mode  
+base_size=640, image_size=640, crop_mode=False
+
+# Base mode
+base_size=1024, image_size=1024, crop_mode=False
+
+# Large mode
+base_size=1280, image_size=1280, crop_mode=False
+
+# Gundam mode (dynamic cropping)
+base_size=1024, image_size=640, crop_mode=True
+```
 
 ## Prompts examples
 ```python
