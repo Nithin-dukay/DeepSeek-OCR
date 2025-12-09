@@ -281,6 +281,11 @@ class DeepseekOCRForCausalLM(nn.Module, SupportsMultiModal, SupportsPP):
         self.projector_config = config.projector_config
         self.text_config = config.text_config
 
+        # Disable fused MoE to avoid CUDA illegal memory access errors
+        # in Triton kernel for certain image inputs
+        if hasattr(self.text_config, 'moe_config'):
+            self.text_config.moe_config.use_fused_moe = False
+
         model_config = vllm_config.model_config
         tokenizer = cached_tokenizer_from_config(model_config)
         self.image_token_id = tokenizer.vocab[_IMAGE_TOKEN]
