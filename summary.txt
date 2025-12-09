@@ -1,0 +1,96 @@
+DeepSeek-OCR: Contexts Optical Compression
+===========================================
+
+PROJECT OVERVIEW
+-----------------
+DeepSeek-OCR is an advanced optical character recognition (OCR) model developed by DeepSeek AI 
+that investigates the role of vision encoders from an LLM-centric viewpoint. The model focuses 
+on visual-text compression and provides efficient OCR capabilities for documents, images, and PDFs.
+
+KEY FEATURES
+------------
+- Multiple resolution modes: Tiny (512×512), Small (640×640), Base (1024×1024), Large (1280×1280)
+- Dynamic resolution support (Gundam mode)
+- High-performance batch processing (~2500 tokens/s on A100-40G)
+- Support for both vLLM and Transformers inference
+- Document-to-markdown conversion
+- Figure parsing and general image description
+- Text localization and recognition
+
+RELEASE INFORMATION
+-------------------
+- October 23, 2025: Official vLLM upstream support
+- October 20, 2025: Initial release of DeepSeek-OCR model
+
+TECHNICAL REQUIREMENTS
+----------------------
+- Python 3.12.9
+- CUDA 11.8
+- PyTorch 2.6.0
+- vLLM 0.8.5
+- Flash Attention 2.7.3
+- Transformers 4.46.3
+
+MAIN DEPENDENCIES
+-----------------
+- transformers==4.46.3
+- tokenizers==0.20.3
+- PyMuPDF (PDF processing)
+- img2pdf (image to PDF conversion)
+- einops (tensor operations)
+- Pillow (image processing)
+- numpy (numerical computing)
+
+PROJECT STRUCTURE
+-----------------
+- DeepSeek-OCR-master/DeepSeek-OCR-vllm/: vLLM inference implementation
+  - run_dpsk_ocr_image.py: Image processing with streaming output
+  - run_dpsk_ocr_pdf.py: PDF processing with concurrency support
+  - run_dpsk_ocr_eval_batch.py: Batch evaluation for benchmarks
+  - config.py: Configuration settings
+
+- DeepSeek-OCR-master/DeepSeek-OCR-hf/: Hugging Face Transformers implementation
+  - run_dpsk_ocr.py: Main inference script
+
+- assets/: Visual assets and example outputs
+- DeepSeek_OCR_paper.pdf: Research paper
+
+USAGE MODES
+-----------
+1. Document OCR: Convert documents to markdown with layout preservation
+2. Free OCR: Extract text without layout information
+3. Figure Parsing: Parse figures within documents
+4. General Description: Detailed image descriptions
+5. Text Recognition: Locate specific text within images
+
+PROMPT EXAMPLES
+---------------
+- Document: "<image>\n<|grounding|>Convert the document to markdown."
+- Image OCR: "<image>\n<|grounding|>OCR this image."
+- Free OCR: "<image>\nFree OCR."
+- Figure: "<image>\nParse the figure."
+- Description: "<image>\nDescribe this image in detail."
+- Recognition: "<image>\nLocate <|ref|>xxxx<|/ref|> in the image."
+
+PERFORMANCE
+-----------
+- Efficient vision token compression (64-400 tokens depending on resolution)
+- Concurrent PDF processing at ~2500 tokens/s on A100-40G GPU
+- Support for batch evaluation on benchmarks
+
+LINKS
+-----
+- Model: https://huggingface.co/deepseek-ai/DeepSeek-OCR
+- Paper: https://arxiv.org/abs/2510.18234
+- GitHub: https://github.com/deepseek-ai/DeepSeek-OCR
+- vLLM Documentation: https://docs.vllm.ai/projects/recipes/en/latest/DeepSeek/DeepSeek-OCR.html
+
+ACKNOWLEDGEMENTS
+----------------
+Built upon research and ideas from: Vary, GOT-OCR2.0, MinerU, PaddleOCR, OneChart, 
+Slow Perception, Fox benchmark, and OminiDocBench.
+
+CITATION
+--------
+Wei, H., Sun, Y., & Li, Y. (2025). DeepSeek-OCR: Contexts Optical Compression. 
+arXiv preprint arXiv:2510.18234.
