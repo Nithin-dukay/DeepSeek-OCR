@@ -52,6 +52,7 @@
 </p>
 
 ## Release
+- [2025/12/09]🔧 **Fixed Issue #288**: Model now works correctly with modified prompts. See [QUICK_FIX_GUIDE.md](QUICK_FIX_GUIDE.md) and [PROMPT_GUIDELINES.md](PROMPT_GUIDELINES.md) for details.
 - [2025/10/23]🚀🚀🚀 DeepSeek-OCR is now officially supported in upstream [vLLM](https://docs.vllm.ai/projects/recipes/en/latest/DeepSeek/DeepSeek-OCR.html#installing-vllm). Thanks to the [vLLM](https://github.com/vllm-project/vllm) team for their help.
 - [2025/10/20]🚀🚀🚀 We release DeepSeek-OCR, a model to investigate the role of vision encoders from an LLM-centric viewpoint.
 
@@ -59,6 +60,7 @@
 - [Install](#install)
 - [vLLM Inference](#vllm-inference)
 - [Transformers Inference](#transformers-inference)
+- [Prompt Guidelines](#prompt-guidelines) ⭐ **NEW**
   
 
 
@@ -206,6 +208,31 @@ The current open-source model supports the following modes:
 # rec: <image>\nLocate <|ref|>xxxx<|/ref|> in the image.
 # '先天下之忧而忧'
 ```
+
+## Prompt Guidelines
+
+⚠️ **Important**: If you're modifying prompts and experiencing issues (e.g., model outputs repeated numbers), please see:
+
+- **[QUICK_FIX_GUIDE.md](QUICK_FIX_GUIDE.md)** - Quick solution for Issue #288
+- **[PROMPT_GUIDELINES.md](PROMPT_GUIDELINES.md)** - Comprehensive prompt best practices
+- **[ISSUE_288_FIX_SUMMARY.md](ISSUE_288_FIX_SUMMARY.md)** - Technical details of the fix
+
+### Using Prompt Utilities
+
+```python
+from process.prompt_utils import create_safe_prompt, get_recommended_ngram_params
+
+# Create a safe prompt
+prompt = create_safe_prompt(
+    base_instruction="Convert the document to markdown",
+    task_type="grounding"
+)
+
+# Get recommended parameters for custom prompts
+params = get_recommended_ngram_params(prompt)
+```
+
+For more details, see the [Prompt Guidelines](PROMPT_GUIDELINES.md).
 
 
 ## Visualizations
