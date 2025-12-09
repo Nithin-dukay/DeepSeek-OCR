@@ -2,12 +2,14 @@ import os
 import re
 from tqdm import tqdm
 import torch
+import argparse
 if torch.version.cuda == '11.8':
     os.environ["TRITON_PTXAS_PATH"] = "/usr/local/cuda-11.8/bin/ptxas"
 os.environ['VLLM_USE_V1'] = '0'
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, MAX_CONCURRENCY, CROP_MODE, NUM_WORKERS
+import config
+from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, MAX_CONCURRENCY, NUM_WORKERS
 from concurrent.futures import ThreadPoolExecutor
 import glob
 from PIL import Image
@@ -78,35 +80,69 @@ def re_match(text):
         mathes_other.append(a_match[0])
     return matches, mathes_other
 
-def process_single_image(image):
+def process_single_image(image, crop_mode):
     """single image"""
     prompt_in = prompt
     cache_item = {
         "prompt": prompt_in,
-        "multi_modal_data": {"image": DeepseekOCRProcessor().tokenize_with_images(images = [image], bos=True, eos=True, cropping=CROP_MODE)},
+        "multi_modal_data": {"image": DeepseekOCRProcessor().tokenize_with_images(images = [image], bos=True, eos=True, cropping=crop_mode)},
     }
     return cache_item
 
 
 if __name__ == "__main__":
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description='DeepSeek-OCR Batch Evaluation with vLLM')
+    parser.add_argument('--mode', type=str, choices=['tiny', 'small', 'base', 'large', 'gundam'],
+                        help='OCR mode: tiny (512x512), small (640x640), base (1024x1024), large (1280x1280), gundam (dynamic resolution)')
+    parser.add_argument('--base-size', type=int, help='Base size for image processing (overrides mode)')
+    parser.add_argument('--image-size', type=int, help='Image size for cropping (overrides mode)')
+    parser.add_argument('--crop-mode', type=lambda x: x.lower() == 'true', help='Enable crop mode (true/false, overrides mode)')
+    parser.add_argument('--input', type=str, help='Input images directory path (overrides config.py)')
+    parser.add_argument('--output', type=str, help='Output directory path (overrides config.py)')
+    parser.add_argument('--prompt', type=str, help='Prompt for OCR (overrides config.py)')
+    
+    args = parser.parse_args()
+    
+    # Set mode parameters
+    if args.mode:
+        mode_config = config.get_mode_config(args.mode)
+        config.BASE_SIZE = mode_config['base_size']
+        config.IMAGE_SIZE = mode_config['image_size']
+        config.CROP_MODE = mode_config['crop_mode']
+        print(f"Using mode: {args.mode} (base_size={config.BASE_SIZE}, image_size={config.IMAGE_SIZE}, crop_mode={config.CROP_MODE})")
+    
+    # Override with individual parameters if provided
+    if args.base_size is not None:
+        config.BASE_SIZE = args.base_size
+        print(f"Overriding base_size: {config.BASE_SIZE}")
+    if args.image_size is not None:
+        config.IMAGE_SIZE = args.image_size
+        print(f"Overriding image_size: {config.IMAGE_SIZE}")
+    if args.crop_mode is not None:
+        config.CROP_MODE = args.crop_mode
+        print(f"Overriding crop_mode: {config.CROP_MODE}")
+    
+    # Override paths if provided
+    input_path = args.input if args.input else INPUT_PATH
+    output_path = args.output if args.output else OUTPUT_PATH
+    prompt = args.prompt if args.prompt else PROMPT
 
     # INPUT_PATH = OmniDocBench images path
 
-    os.makedirs(OUTPUT_PATH, exist_ok=True)
+    os.makedirs(output_path, exist_ok=True)
 
     # print('image processing until processing prompts.....')
 
     print(f'{Colors.RED}glob images.....{Colors.RESET}')
 
-    images_path = glob.glob(f'{INPUT_PATH}/*')
+    images_path = glob.glob(f'{input_path}/*')
 
     images = []
 
     for image_path in images_path:
         image = Image.open(image_path).convert('RGB')
         images.append(image)
-
-    prompt = PROMPT
 
     # batch_inputs = []
 
@@ -124,7 +160,7 @@ if __name__ == "__main__":
 
     with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:  
         batch_inputs = list(tqdm(
-            executor.map(process_single_image, images),
+            executor.map(lambda img: process_single_image(img, config.CROP_MODE), images),
             total=len(images),
             desc="Pre-processed images"
         ))
@@ -137,8 +173,6 @@ if __name__ == "__main__":
         sampling_params=sampling_params
     )
 
-
-    output_path = OUTPUT_PATH
 
     os.makedirs(output_path, exist_ok=True)
 

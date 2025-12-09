@@ -92,18 +92,66 @@ pip install flash-attn==2.7.3 --no-build-isolation
 ```Shell
 cd DeepSeek-OCR-master/DeepSeek-OCR-vllm
 ```
+
+### Mode Selection
+You can now select different OCR modes when running vLLM inference scripts using command-line arguments:
+
+**Available Modes:**
+- `tiny`: 512×512 (64 vision tokens)
+- `small`: 640×640 (100 vision tokens)
+- `base`: 1024×1024 (256 vision tokens)
+- `large`: 1280×1280 (400 vision tokens)
+- `gundam`: Dynamic resolution with n×640×640 + 1×1024×1024 (default)
+
+**Usage Examples:**
+
 1. image: streaming output
 ```Shell
+# Using default mode (gundam)
 python run_dpsk_ocr_image.py
+
+# Using a specific mode
+python run_dpsk_ocr_image.py --mode base
+
+# Using tiny mode for faster processing
+python run_dpsk_ocr_image.py --mode tiny
+
+# Override with custom parameters
+python run_dpsk_ocr_image.py --base-size 1024 --image-size 1024 --crop-mode false
+
+# Specify input/output paths
+python run_dpsk_ocr_image.py --mode small --input /path/to/image.jpg --output /path/to/output
 ```
+
 2. pdf: concurrency ~2500tokens/s(an A100-40G)
 ```Shell
+# Using default mode (gundam)
 python run_dpsk_ocr_pdf.py
+
+# Using base mode for better quality
+python run_dpsk_ocr_pdf.py --mode base
+
+# Using small mode for faster processing
+python run_dpsk_ocr_pdf.py --mode small --input /path/to/document.pdf --output /path/to/output
 ```
+
 3. batch eval for benchmarks
 ```Shell
+# Using default mode (gundam)
 python run_dpsk_ocr_eval_batch.py
+
+# Using specific mode for evaluation
+python run_dpsk_ocr_eval_batch.py --mode base --input /path/to/images --output /path/to/results
 ```
+
+**Command-line Arguments:**
+- `--mode [tiny|small|base|large|gundam]`: Select OCR mode
+- `--base-size INT`: Override base size for image processing
+- `--image-size INT`: Override image size for cropping
+- `--crop-mode [true|false]`: Enable/disable crop mode
+- `--input PATH`: Input file/directory path
+- `--output PATH`: Output directory path
+- `--prompt TEXT`: Custom prompt for OCR
 
 **[2025/10/23] The version of upstream [vLLM](https://docs.vllm.ai/projects/recipes/en/latest/DeepSeek/DeepSeek-OCR.html#installing-vllm):**
 

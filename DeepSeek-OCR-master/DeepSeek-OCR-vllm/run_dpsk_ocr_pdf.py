@@ -6,6 +6,7 @@ import re
 from tqdm import tqdm
 import torch
 from concurrent.futures import ThreadPoolExecutor
+import argparse
  
 
 if torch.version.cuda == '11.8':
@@ -14,7 +15,8 @@ os.environ['VLLM_USE_V1'] = '0'
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
 
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, SKIP_REPEAT, MAX_CONCURRENCY, NUM_WORKERS, CROP_MODE
+import config
+from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, SKIP_REPEAT, MAX_CONCURRENCY, NUM_WORKERS
 
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
@@ -220,34 +222,68 @@ def process_image_with_refs(image, ref_texts, jdx):
     return result_image
 
 
-def process_single_image(image):
+def process_single_image(image, crop_mode):
     """single image"""
     prompt_in = prompt
     cache_item = {
         "prompt": prompt_in,
-        "multi_modal_data": {"image": DeepseekOCRProcessor().tokenize_with_images(images = [image], bos=True, eos=True, cropping=CROP_MODE)},
+        "multi_modal_data": {"image": DeepseekOCRProcessor().tokenize_with_images(images = [image], bos=True, eos=True, cropping=crop_mode)},
     }
     return cache_item
 
 
 if __name__ == "__main__":
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description='DeepSeek-OCR PDF Processing with vLLM')
+    parser.add_argument('--mode', type=str, choices=['tiny', 'small', 'base', 'large', 'gundam'],
+                        help='OCR mode: tiny (512x512), small (640x640), base (1024x1024), large (1280x1280), gundam (dynamic resolution)')
+    parser.add_argument('--base-size', type=int, help='Base size for image processing (overrides mode)')
+    parser.add_argument('--image-size', type=int, help='Image size for cropping (overrides mode)')
+    parser.add_argument('--crop-mode', type=lambda x: x.lower() == 'true', help='Enable crop mode (true/false, overrides mode)')
+    parser.add_argument('--input', type=str, help='Input PDF path (overrides config.py)')
+    parser.add_argument('--output', type=str, help='Output directory path (overrides config.py)')
+    parser.add_argument('--prompt', type=str, help='Prompt for OCR (overrides config.py)')
+    
+    args = parser.parse_args()
+    
+    # Set mode parameters
+    if args.mode:
+        mode_config = config.get_mode_config(args.mode)
+        config.BASE_SIZE = mode_config['base_size']
+        config.IMAGE_SIZE = mode_config['image_size']
+        config.CROP_MODE = mode_config['crop_mode']
+        print(f"Using mode: {args.mode} (base_size={config.BASE_SIZE}, image_size={config.IMAGE_SIZE}, crop_mode={config.CROP_MODE})")
+    
+    # Override with individual parameters if provided
+    if args.base_size is not None:
+        config.BASE_SIZE = args.base_size
+        print(f"Overriding base_size: {config.BASE_SIZE}")
+    if args.image_size is not None:
+        config.IMAGE_SIZE = args.image_size
+        print(f"Overriding image_size: {config.IMAGE_SIZE}")
+    if args.crop_mode is not None:
+        config.CROP_MODE = args.crop_mode
+        print(f"Overriding crop_mode: {config.CROP_MODE}")
+    
+    # Override paths if provided
+    input_path = args.input if args.input else INPUT_PATH
+    output_path = args.output if args.output else OUTPUT_PATH
+    prompt = args.prompt if args.prompt else PROMPT
 
-    os.makedirs(OUTPUT_PATH, exist_ok=True)
-    os.makedirs(f'{OUTPUT_PATH}/images', exist_ok=True)
+    os.makedirs(output_path, exist_ok=True)
+    os.makedirs(f'{output_path}/images', exist_ok=True)
     
     print(f'{Colors.RED}PDF loading .....{Colors.RESET}')
 
 
-    images = pdf_to_images_high_quality(INPUT_PATH)
+    images = pdf_to_images_high_quality(input_path)
 
-
-    prompt = PROMPT
 
     # batch_inputs = []
 
     with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:  
         batch_inputs = list(tqdm(
-            executor.map(process_single_image, images),
+            executor.map(lambda img: process_single_image(img, config.CROP_MODE), images),
             total=len(images),
             desc="Pre-processed images"
         ))
@@ -271,14 +307,12 @@ if __name__ == "__main__":
     )
 
 
-    output_path = OUTPUT_PATH
-
     os.makedirs(output_path, exist_ok=True)
 
 
-    mmd_det_path = output_path + '/' + INPUT_PATH.split('/')[-1].replace('.pdf', '_det.mmd')
-    mmd_path = output_path + '/' + INPUT_PATH.split('/')[-1].replace('pdf', 'mmd')
-    pdf_out_path = output_path + '/' + INPUT_PATH.split('/')[-1].replace('.pdf', '_layouts.pdf')
+    mmd_det_path = output_path + '/' + input_path.split('/')[-1].replace('.pdf', '_det.mmd')
+    mmd_path = output_path + '/' + input_path.split('/')[-1].replace('pdf', 'mmd')
+    pdf_out_path = output_path + '/' + input_path.split('/')[-1].replace('.pdf', '_layouts.pdf')
     contents_det = ''
     contents = ''
     draw_images = []

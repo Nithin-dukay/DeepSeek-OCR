@@ -1,13 +1,31 @@
-# TODO: change modes
-# Tiny: base_size = 512, image_size = 512, crop_mode = False
-# Small: base_size = 640, image_size = 640, crop_mode = False
-# Base: base_size = 1024, image_size = 1024, crop_mode = False
-# Large: base_size = 1280, image_size = 1280, crop_mode = False
-# Gundam: base_size = 1024, image_size = 640, crop_mode = True
+# Mode configurations
+# Available modes: tiny, small, base, large, gundam
+MODES = {
+    'tiny': {'base_size': 512, 'image_size': 512, 'crop_mode': False},
+    'small': {'base_size': 640, 'image_size': 640, 'crop_mode': False},
+    'base': {'base_size': 1024, 'image_size': 1024, 'crop_mode': False},
+    'large': {'base_size': 1280, 'image_size': 1280, 'crop_mode': False},
+    'gundam': {'base_size': 1024, 'image_size': 640, 'crop_mode': True}
+}
 
-BASE_SIZE = 1024
-IMAGE_SIZE = 640
-CROP_MODE = True
+# Default mode (can be overridden via command-line arguments)
+MODE = 'gundam'  # Options: tiny, small, base, large, gundam
+
+# Get mode parameters (will be set based on MODE or command-line args)
+def get_mode_config(mode=None):
+    """Get configuration for a specific mode."""
+    if mode is None:
+        mode = MODE
+    if mode.lower() not in MODES:
+        raise ValueError(f"Invalid mode: {mode}. Available modes: {list(MODES.keys())}")
+    return MODES[mode.lower()]
+
+# Default parameters (Gundam mode by default)
+_default_config = get_mode_config(MODE)
+BASE_SIZE = _default_config['base_size']
+IMAGE_SIZE = _default_config['image_size']
+CROP_MODE = _default_config['crop_mode']
+
 MIN_CROPS= 2
 MAX_CROPS= 6 # max:9; If your GPU memory is small, it is recommended to set it to 6.
 MAX_CONCURRENCY = 100 # If you have limited GPU memory, lower the concurrency count.
