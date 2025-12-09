@@ -209,13 +209,12 @@ if __name__ == "__main__":
     image = load_image(INPUT_PATH).convert('RGB')
 
     
-    if '<image>' in PROMPT:
-
-        image_features = DeepseekOCRProcessor().tokenize_with_images(images = [image], bos=True, eos=True, cropping=CROP_MODE)
+    prompt = PROMPT
+    
+    if '<image>' in prompt:
+        image_features = DeepseekOCRProcessor().tokenize_with_images(images=[image], bos=True, eos=True, cropping=CROP_MODE, prompt=prompt)
     else:
         image_features = ''
-
-    prompt = PROMPT
 
     result_out = asyncio.run(stream_generate(image_features, prompt))
 

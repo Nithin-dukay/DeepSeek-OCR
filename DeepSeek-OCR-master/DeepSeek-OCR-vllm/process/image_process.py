@@ -329,16 +329,16 @@ class DeepseekOCRProcessor(ProcessorMixin):
 
     def tokenize_with_images(
         self,
-        # conversation: str,
         images: List[Image.Image],
         bos: bool = True,
         eos: bool = True,
         cropping: bool = True,
+        prompt: str = None,
     ):
         """Tokenize text with <image> tags."""
 
-        # print(conversation)
-        conversation = PROMPT
+        # Use provided prompt or fall back to PROMPT from config
+        conversation = prompt if prompt is not None else PROMPT
         assert conversation.count(self.image_token) == len(images)
         text_splits = conversation.split(self.image_token)
         images_list, images_crop_list, images_seq_mask, images_spatial_crop = [], [], [], []

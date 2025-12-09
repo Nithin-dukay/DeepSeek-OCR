@@ -1,0 +1,87 @@
+diff --git a/DeepSeek-OCR-master/DeepSeek-OCR-vllm/process/image_process.py b/DeepSeek-OCR-master/DeepSeek-OCR-vllm/process/image_process.py
+index 1234567..abcdefg 100644
+--- a/DeepSeek-OCR-master/DeepSeek-OCR-vllm/process/image_process.py
++++ b/DeepSeek-OCR-master/DeepSeek-OCR-vllm/process/image_process.py
+@@ -430,15 +430,16 @@ class DeepseekOCRProcessor(ProcessorMixin):
+ 
+     def tokenize_with_images(
+         self,
+-        # conversation: str,
+         images: List[Image.Image],
+         bos: bool = True,
+         eos: bool = True,
+         cropping: bool = True,
++        prompt: str = None,
+     ):
+         """Tokenize text with <image> tags."""
+ 
+-        # print(conversation)
+-        conversation = PROMPT
++        # Use provided prompt or fall back to PROMPT from config
++        conversation = prompt if prompt is not None else PROMPT
+         assert conversation.count(self.image_token) == len(images)
+
+diff --git a/DeepSeek-OCR-master/DeepSeek-OCR-vllm/run_dpsk_ocr_image.py b/DeepSeek-OCR-master/DeepSeek-OCR-vllm/run_dpsk_ocr_image.py
+index 2345678..bcdefgh 100644
+--- a/DeepSeek-OCR-master/DeepSeek-OCR-vllm/run_dpsk_ocr_image.py
++++ b/DeepSeek-OCR-master/DeepSeek-OCR-vllm/run_dpsk_ocr_image.py
+@@ -210,11 +210,11 @@ if __name__ == "__main__":
+ 
+     image = load_image(INPUT_PATH).convert('RGB')
+ 
++    prompt = PROMPT
+     
+-    if '<image>' in PROMPT:
+-
+-        image_features = DeepseekOCRProcessor().tokenize_with_images(images = [image], bos=True, eos=True, cropping=CROP_MODE)
++    if '<image>' in prompt:
++        image_features = DeepseekOCRProcessor().tokenize_with_images(images=[image], bos=True, eos=True, cropping=CROP_MODE, prompt=prompt)
+     else:
+         image_features = ''
+-
+-    prompt = PROMPT
+
+diff --git a/DeepSeek-OCR-master/DeepSeek-OCR-vllm/run_dpsk_ocr_pdf.py b/DeepSeek-OCR-master/DeepSeek-OCR-vllm/run_dpsk_ocr_pdf.py
+index 3456789..cdefghi 100644
+--- a/DeepSeek-OCR-master/DeepSeek-OCR-vllm/run_dpsk_ocr_pdf.py
++++ b/DeepSeek-OCR-master/DeepSeek-OCR-vllm/run_dpsk_ocr_pdf.py
+@@ -223,7 +223,7 @@ def process_image_with_refs(image, ref_texts, jdx):
+ def process_single_image(image):
+     """single image"""
+     prompt_in = prompt
+     cache_item = {
+         "prompt": prompt_in,
+-        "multi_modal_data": {"image": DeepseekOCRProcessor().tokenize_with_images(images = [image], bos=True, eos=True, cropping=CROP_MODE)},
++        "multi_modal_data": {"image": DeepseekOCRProcessor().tokenize_with_images(images=[image], bos=True, eos=True, cropping=CROP_MODE, prompt=prompt_in)},
+     }
+     return cache_item
+
+diff --git a/DeepSeek-OCR-master/DeepSeek-OCR-vllm/run_dpsk_ocr_eval_batch.py b/DeepSeek-OCR-master/DeepSeek-OCR-vllm/run_dpsk_ocr_eval_batch.py
+index 4567890..defghij 100644
+--- a/DeepSeek-OCR-master/DeepSeek-OCR-vllm/run_dpsk_ocr_eval_batch.py
++++ b/DeepSeek-OCR-master/DeepSeek-OCR-vllm/run_dpsk_ocr_eval_batch.py
+@@ -81,7 +81,7 @@ def re_match(text):
+ def process_single_image(image):
+     """single image"""
+     prompt_in = prompt
+     cache_item = {
+         "prompt": prompt_in,
+-        "multi_modal_data": {"image": DeepseekOCRProcessor().tokenize_with_images(images = [image], bos=True, eos=True, cropping=CROP_MODE)},
++        "multi_modal_data": {"image": DeepseekOCRProcessor().tokenize_with_images(images=[image], bos=True, eos=True, cropping=CROP_MODE, prompt=prompt_in)},
+     }
+     return cache_item
+
+diff --git a/DeepSeek-OCR-master/DeepSeek-OCR-vllm/deepseek_ocr.py b/DeepSeek-OCR-master/DeepSeek-OCR-vllm/deepseek_ocr.py
+index 5678901..efghijk 100644
+--- a/DeepSeek-OCR-master/DeepSeek-OCR-vllm/deepseek_ocr.py
++++ b/DeepSeek-OCR-master/DeepSeek-OCR-vllm/deepseek_ocr.py
+@@ -135,7 +135,7 @@ class DeepseekOCRDummyInputsBuilder(
+         if '<image>' in PROMPT:
+             return {
+                 "image":
+-                DeepseekOCRProcessor().tokenize_with_images(images = self._get_dummy_images(width=max_image_size.width,
++                DeepseekOCRProcessor().tokenize_with_images(images=self._get_dummy_images(width=max_image_size.width,
+                                     height=max_image_size.height,
+-                                    num_images=num_images), bos=True, eos=True, cropping=CROP_MODE)
++                                    num_images=num_images), bos=True, eos=True, cropping=CROP_MODE, prompt=PROMPT)
+             }
