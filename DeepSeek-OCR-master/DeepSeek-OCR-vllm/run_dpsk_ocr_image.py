@@ -19,7 +19,8 @@ import numpy as np
 from tqdm import tqdm
 from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
 from process.image_process import DeepseekOCRProcessor
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, CROP_MODE
+from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, CROP_MODE, USE_WIDE_TABLE_CONFIG, DOCUMENT_TYPE
+from table_token_config import get_config_for_document_type, get_table_token_ids, check_token_usage
 
 
 
@@ -146,12 +147,21 @@ def process_image_with_refs(image, ref_texts):
 
 async def stream_generate(image=None, prompt=''):
 
+    # Get optimized configuration for table processing (Issue #295 fix)
+    config_type = DOCUMENT_TYPE if USE_WIDE_TABLE_CONFIG else 'default'
+    table_config = get_config_for_document_type(config_type)
+    
+    print(f"Using configuration: {config_type}")
+    print(f"  - ngram_size: {table_config['ngram_size']}")
+    print(f"  - window_size: {table_config['window_size']}")
+    print(f"  - max_tokens: {table_config['max_tokens']}")
+    print(f"  - whitelist tokens: {len(table_config['whitelist_token_ids'])} tokens")
 
     engine_args = AsyncEngineArgs(
         model=MODEL_PATH,
         hf_overrides={"architectures": ["DeepseekOCRForCausalLM"]},
         block_size=256,
-        max_model_len=8192,
+        max_model_len=table_config['max_model_len'],  # Updated from hardcoded 8192
         enforce_eager=False,
         trust_remote_code=True,  
         tensor_parallel_size=1,
@@ -159,11 +169,18 @@ async def stream_generate(image=None, prompt=''):
     )
     engine = AsyncLLMEngine.from_engine_args(engine_args)
     
-    logits_processors = [NoRepeatNGramLogitsProcessor(ngram_size=30, window_size=90, whitelist_token_ids= {128821, 128822})] #whitelist: <td>, </td> 
+    # Use expanded whitelist for table tokens (Issue #295 fix)
+    # Original: only {128821, 128822} for <td>, </td>
+    # Updated: includes <tr>, </tr>, <table>, </table>, etc.
+    logits_processors = [NoRepeatNGramLogitsProcessor(
+        ngram_size=table_config['ngram_size'],  # More lenient for wide tables
+        window_size=table_config['window_size'],  # Adjusted window
+        whitelist_token_ids=table_config['whitelist_token_ids']  # Expanded whitelist
+    )]
 
     sampling_params = SamplingParams(
         temperature=0.0,
-        max_tokens=8192,
+        max_tokens=table_config['max_tokens'],  # Updated from hardcoded 8192
         logits_processors=logits_processors,
         skip_special_tokens=False,
         # ignore_eos=False,
@@ -194,6 +211,10 @@ async def stream_generate(image=None, prompt=''):
             print(new_text, end='', flush=True)
             printed_length = len(full_text)
             final_output = full_text
+            
+            # Check token usage and warn if approaching limit (Issue #295 fix)
+            if hasattr(request_output.outputs[0], 'token_ids'):
+                check_token_usage(len(request_output.outputs[0].token_ids), table_config['max_tokens'])
     print('\n') 
 
     return final_output

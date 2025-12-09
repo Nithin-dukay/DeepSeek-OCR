@@ -9,12 +9,17 @@ BASE_SIZE = 1024
 IMAGE_SIZE = 640
 CROP_MODE = True
 MIN_CROPS= 2
-MAX_CROPS= 6 # max:9; If your GPU memory is small, it is recommended to set it to 6.
+MAX_CROPS= 9 # max:9; Increased from 6 to 9 for better wide table support (Issue #295)
 MAX_CONCURRENCY = 100 # If you have limited GPU memory, lower the concurrency count.
 NUM_WORKERS = 64 # image pre-process (resize/padding) workers 
 PRINT_NUM_VIS_TOKENS = False
 SKIP_REPEAT = True
 MODEL_PATH = 'deepseek-ai/DeepSeek-OCR' # change to your model path
+
+# Table processing configuration (Issue #295 fix)
+# Set to True to use optimized settings for documents with wide tables
+USE_WIDE_TABLE_CONFIG = False  # Set to True when processing documents with wide tables
+DOCUMENT_TYPE = 'default'  # Options: 'default', 'wide_table', 'table_heavy', 'pdf', 'batch_eval'
 
 # TODO: change INPUT_PATH
 # .pdf: run_dpsk_ocr_pdf.py; 

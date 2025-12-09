@@ -7,7 +7,7 @@ if torch.version.cuda == '11.8':
 os.environ['VLLM_USE_V1'] = '0'
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, MAX_CONCURRENCY, CROP_MODE, NUM_WORKERS
+from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, MAX_CONCURRENCY, CROP_MODE, NUM_WORKERS, USE_WIDE_TABLE_CONFIG, DOCUMENT_TYPE
 from concurrent.futures import ThreadPoolExecutor
 import glob
 from PIL import Image
@@ -18,8 +18,18 @@ from vllm.model_executor.models.registry import ModelRegistry
 from vllm import LLM, SamplingParams
 from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
 from process.image_process import DeepseekOCRProcessor
+from table_token_config import get_config_for_document_type, check_token_usage
 ModelRegistry.register_model("DeepseekOCRForCausalLM", DeepseekOCRForCausalLM)
 
+# Get optimized configuration for table processing (Issue #295 fix)
+config_type = 'batch_eval' if not USE_WIDE_TABLE_CONFIG else DOCUMENT_TYPE
+table_config = get_config_for_document_type(config_type)
+
+print(f"Batch Evaluation - Using configuration: {config_type}")
+print(f"  - ngram_size: {table_config['ngram_size']}")
+print(f"  - window_size: {table_config['window_size']}")
+print(f"  - max_tokens: {table_config['max_tokens']}")
+print(f"  - whitelist tokens: {len(table_config['whitelist_token_ids'])} tokens")
 
 llm = LLM(
     model=MODEL_PATH,
@@ -27,18 +37,25 @@ llm = LLM(
     block_size=256,
     enforce_eager=False,
     trust_remote_code=True, 
-    max_model_len=8192,
+    max_model_len=table_config['max_model_len'],  # Updated from hardcoded 8192
     swap_space=0,
     max_num_seqs = MAX_CONCURRENCY,
     tensor_parallel_size=1,
     gpu_memory_utilization=0.9,
 )
 
-logits_processors = [NoRepeatNGramLogitsProcessor(ngram_size=40, window_size=90, whitelist_token_ids= {128821, 128822})] #window for fast；whitelist_token_ids: <td>,</td>
+# Use expanded whitelist for table tokens (Issue #295 fix)
+# Original: only {128821, 128822} for <td>, </td>
+# Updated: includes <tr>, </tr>, <table>, </table>, etc.
+logits_processors = [NoRepeatNGramLogitsProcessor(
+    ngram_size=table_config['ngram_size'],  # More lenient for batch evaluation
+    window_size=table_config['window_size'],  # Adjusted window
+    whitelist_token_ids=table_config['whitelist_token_ids']  # Expanded whitelist
+)]
 
 sampling_params = SamplingParams(
     temperature=0.0,
-    max_tokens=8192,
+    max_tokens=table_config['max_tokens'],  # Updated from hardcoded 8192
     logits_processors=logits_processors,
     skip_special_tokens=False,
 )
@@ -145,6 +162,12 @@ if __name__ == "__main__":
     for output, image in zip(outputs_list, images_path):
 
         content = output.outputs[0].text
+        
+        # Check token usage and warn if approaching limit (Issue #295 fix)
+        if hasattr(output.outputs[0], 'token_ids'):
+            output_length = len(output.outputs[0].token_ids)
+            check_token_usage(output_length, table_config['max_tokens'])
+        
         mmd_det_path = output_path + image.split('/')[-1].replace('.jpg', '_det.md')
 
         with open(mmd_det_path, 'w', encoding='utf-8') as afile:

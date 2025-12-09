@@ -14,7 +14,7 @@ os.environ['VLLM_USE_V1'] = '0'
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
 
-from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, SKIP_REPEAT, MAX_CONCURRENCY, NUM_WORKERS, CROP_MODE
+from config import MODEL_PATH, INPUT_PATH, OUTPUT_PATH, PROMPT, SKIP_REPEAT, MAX_CONCURRENCY, NUM_WORKERS, CROP_MODE, USE_WIDE_TABLE_CONFIG, DOCUMENT_TYPE
 
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
@@ -25,9 +25,19 @@ from vllm.model_executor.models.registry import ModelRegistry
 from vllm import LLM, SamplingParams
 from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
 from process.image_process import DeepseekOCRProcessor
+from table_token_config import get_config_for_document_type, check_token_usage
 
 ModelRegistry.register_model("DeepseekOCRForCausalLM", DeepseekOCRForCausalLM)
 
+# Get optimized configuration for table processing (Issue #295 fix)
+config_type = 'pdf' if not USE_WIDE_TABLE_CONFIG else DOCUMENT_TYPE
+table_config = get_config_for_document_type(config_type)
+
+print(f"PDF Processing - Using configuration: {config_type}")
+print(f"  - ngram_size: {table_config['ngram_size']}")
+print(f"  - window_size: {table_config['window_size']}")
+print(f"  - max_tokens: {table_config['max_tokens']}")
+print(f"  - whitelist tokens: {len(table_config['whitelist_token_ids'])} tokens")
 
 llm = LLM(
     model=MODEL_PATH,
@@ -35,7 +45,7 @@ llm = LLM(
     block_size=256,
     enforce_eager=False,
     trust_remote_code=True, 
-    max_model_len=8192,
+    max_model_len=table_config['max_model_len'],  # Updated from hardcoded 8192
     swap_space=0,
     max_num_seqs=MAX_CONCURRENCY,
     tensor_parallel_size=1,
@@ -43,11 +53,18 @@ llm = LLM(
     disable_mm_preprocessor_cache=True
 )
 
-logits_processors = [NoRepeatNGramLogitsProcessor(ngram_size=20, window_size=50, whitelist_token_ids= {128821, 128822})] #window for fast；whitelist_token_ids: <td>,</td>
+# Use expanded whitelist for table tokens (Issue #295 fix)
+# Original: only {128821, 128822} for <td>, </td>
+# Updated: includes <tr>, </tr>, <table>, </table>, etc.
+logits_processors = [NoRepeatNGramLogitsProcessor(
+    ngram_size=table_config['ngram_size'],  # More lenient for PDFs with tables
+    window_size=table_config['window_size'],  # Adjusted window
+    whitelist_token_ids=table_config['whitelist_token_ids']  # Expanded whitelist
+)]
 
 sampling_params = SamplingParams(
     temperature=0.0,
-    max_tokens=8192,
+    max_tokens=table_config['max_tokens'],  # Updated from hardcoded 8192
     logits_processors=logits_processors,
     skip_special_tokens=False,
     include_stop_str_in_output=True,
@@ -285,6 +302,11 @@ if __name__ == "__main__":
     jdx = 0
     for output, img in zip(outputs_list, images):
         content = output.outputs[0].text
+        
+        # Check token usage and warn if approaching limit (Issue #295 fix)
+        if hasattr(output.outputs[0], 'token_ids'):
+            output_length = len(output.outputs[0].token_ids)
+            check_token_usage(output_length, table_config['max_tokens'])
 
         if '<｜end▁of▁sentence｜>' in content: # repeat no eos
             content = content.replace('<｜end▁of▁sentence｜>', '')
