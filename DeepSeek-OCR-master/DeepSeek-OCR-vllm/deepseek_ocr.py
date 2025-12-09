@@ -62,31 +62,39 @@ class DeepseekOCRProcessingInfo(BaseProcessingInfo):
                              *,
                              image_width: int,
                              image_height: int,
-                             cropping: bool = True) -> int:
+                             cropping: bool = True,
+                             base_size: int = None,
+                             image_size: int = None,
+                             crop_mode: bool = None) -> int:
+        """Calculate number of image tokens based on image dimensions and mode.
+        
+        Args:
+            image_width: Width of the image
+            image_height: Height of the image
+            cropping: Use cropping (deprecated, use crop_mode instead)
+            base_size: Base resolution for global view (e.g., 512, 640, 1024, 1280)
+            image_size: Tile resolution for local views (e.g., 512, 640, 1024, 1280)
+            crop_mode: Enable dynamic cropping for Gundam mode
+        """
         hf_processor = self.get_hf_processor()
 
-
-        # image_size = hf_processor.image_size
-        # patch_size = hf_processor.patch_size
-        # downsample_ratio = hf_processor.downsample_ratio
-
-        image_size = IMAGE_SIZE
-        base_size = BASE_SIZE
+        # Use provided parameters or fall back to config defaults
+        if image_size is None:
+            image_size = IMAGE_SIZE
+        if base_size is None:
+            base_size = BASE_SIZE
+        if crop_mode is None:
+            crop_mode = CROP_MODE if cropping else False
+        
         patch_size = 16
         downsample_ratio = 4
 
-        if CROP_MODE:
+        if crop_mode:
             if image_width <= 640 and image_height <= 640:
                 crop_ratio = [1, 1]
             else:
-                # images_crop_raw, crop_ratio = hf_processor.dynamic_preprocess(image)
-
                 # find the closest aspect ratio to the target
-                crop_ratio = count_tiles(image_width, image_height, image_size=IMAGE_SIZE)
-
-                # print('===========')
-                # print('crop_ratio ', crop_ratio)
-                # print('============')
+                crop_ratio = count_tiles(image_width, image_height, image_size=image_size)
                 
             num_width_tiles, num_height_tiles = crop_ratio
         else:
