@@ -171,7 +171,13 @@ os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 model_name = 'deepseek-ai/DeepSeek-OCR'
 
 tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-model = AutoModel.from_pretrained(model_name, _attn_implementation='flash_attention_2', trust_remote_code=True, use_safetensors=True)
+# Use attn_implementation="eager" to avoid LlamaFlashAttention2 import error
+model = AutoModel.from_pretrained(
+    model_name, 
+    attn_implementation='eager',  # Use 'eager' for compatibility with transformers 4.46.3
+    trust_remote_code=True, 
+    use_safetensors=True
+)
 model = model.eval().cuda().to(torch.bfloat16)
 
 # prompt = "<image>\nFree OCR. "
@@ -220,6 +226,27 @@ The current open-source model supports the following modes:
 </tr>
 </table>
 
+
+## Troubleshooting
+
+### Issue: `cannot import name 'LlamaFlashAttention2' from 'transformers.models.llama.modeling_llama'`
+
+**Problem**: When loading the model, you may encounter an import error for `LlamaFlashAttention2`.
+
+**Solution**: Use `attn_implementation='eager'` when loading the model:
+
+```python
+model = AutoModel.from_pretrained(
+    model_name, 
+    attn_implementation='eager',  # This fixes the import error
+    trust_remote_code=True, 
+    use_safetensors=True
+)
+```
+
+**Why this happens**: The model's HuggingFace code imports `LlamaFlashAttention2` which is not available in transformers 4.46.3. Using eager attention bypasses this import and works correctly for most use cases since the model primarily uses MLA (Multi-head Latent Attention) rather than the Llama attention classes.
+
+For more details and alternative solutions, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 
 ## Acknowledgement
 

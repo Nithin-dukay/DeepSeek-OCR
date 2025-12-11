@@ -1,3 +1,5 @@
+# Note: transformers 4.46.3 is compatible but requires attn_implementation="eager"
+# to avoid LlamaFlashAttention2 import error (see TROUBLESHOOTING.md)
 transformers==4.46.3
 tokenizers==0.20.3
 PyMuPDF

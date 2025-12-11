@@ -10,7 +10,14 @@ model_name = 'deepseek-ai/DeepSeek-OCR'
 
 
 tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-model = AutoModel.from_pretrained(model_name, _attn_implementation='flash_attention_2', trust_remote_code=True, use_safetensors=True)
+# Use attn_implementation="eager" to avoid LlamaFlashAttention2 import error
+# This is compatible with transformers 4.46.3 and avoids the missing class issue
+model = AutoModel.from_pretrained(
+    model_name, 
+    attn_implementation='eager',  # Changed from _attn_implementation='flash_attention_2'
+    trust_remote_code=True, 
+    use_safetensors=True
+)
 model = model.eval().cuda().to(torch.bfloat16)
 
 
