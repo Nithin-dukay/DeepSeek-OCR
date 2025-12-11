@@ -77,7 +77,7 @@ conda activate deepseek-ocr
 ```
 3. Packages
 
-- download the vllm-0.8.5 [whl](https://github.com/vllm-project/vllm/releases/tag/v0.8.5) 
+- download the vllm-0.8.5 [whl](https://github.com/vllm-project/vllm/releases/tag/v0.8.5)
 ```Shell
 pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu118
 pip install vllm-0.8.5+cu118-cp38-abi3-manylinux1_x86_64.whl
@@ -85,6 +85,49 @@ pip install -r requirements.txt
 pip install flash-attn==2.7.3 --no-build-isolation
 ```
 **Note:** if you want vLLM and transformers codes to run in the same environment, you don't need to worry about this installation error like: vllm 0.8.5+cu118 requires transformers>=4.51.1
+
+### CUDA 12.8 Installation
+For CUDA 12.8 (e.g., on RTX 5090), follow these steps to install vLLM with compatible nightly builds. This addresses issues with pre-built wheels and dependency conflicts.
+
+1. **Install Core vLLM, Flash Attention & xformers**
+   ```bash
+   # Install the compatible xformers nightly
+   pip install xformers==0.0.33.dev20251104+cu128 --extra-index-url https://download.pytorch.org/whl/nightly/cu128
+
+   # Download the pre-built wheels
+   wget https://github.com/ghcdmm/DeepSeek-OCR/releases/download/1/flash_attn-2.8.3-cp312-cp312-linux_x86_64.whl
+   wget https://github.com/ghcdmm/DeepSeek-OCR/releases/download/1/vllm-0.8.5+cu128-cp312-cp312-linux_x86_64.whl
+
+   # Install the wheels. The flags are important!
+   pip install ./flash_attn-2.8.3-cp312-cp312-linux_x86_64.whl
+   pip install ./vllm-0.8.5+cu128-cp312-cp312-linux_x86_64.whl --no-build-isolation --no-deps
+   ```
+
+2. **Install Initial Dependencies**
+   ```bash
+   pip install pydantic transformers cachetools cloudpickle psutil zmq msgspec blake3
+   ```
+
+3. **The Critical torchvision Fix**
+   ```bash
+   # Install torchvision nightly
+   pip install torchvision --index-url https://download.pytorch.org/whl/nightly/cu128
+
+   # Re-install xformers to fix torch conflicts
+   pip install xformers==0.0.33.dev20251104+cu128 --extra-index-url https://download.pytorch.org/whl/nightly/cu128
+   ```
+
+4. **Final Dependencies**
+   ```bash
+   pip install hf_transfer prometheus_client
+   # Run verification and install any remaining missing packages iteratively
+   python -c "import vllm; print(vllm.__version__)"
+   # If ImportError occurs, install the missing module and repeat until successful
+   ```
+
+Alternatively, use the provided script: `bash install_vllm_cuda128.sh`
+
+**Note:** Ensure Python 3.12 is used, as the wheels are built for cp312. If issues persist, check for missing dependencies by running the verification command and installing as needed.
 
 ## vLLM-Inference
 - VLLM:
