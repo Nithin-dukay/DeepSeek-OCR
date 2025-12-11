@@ -1,3 +1,5 @@
+import os
+
 # TODO: change modes
 # Tiny: base_size = 512, image_size = 512, crop_mode = False
 # Small: base_size = 640, image_size = 640, crop_mode = False
@@ -5,9 +7,10 @@
 # Large: base_size = 1280, image_size = 1280, crop_mode = False
 # Gundam: base_size = 1024, image_size = 640, crop_mode = True
 
-BASE_SIZE = 1024
-IMAGE_SIZE = 640
-CROP_MODE = True
+# Read from environment variables with defaults
+BASE_SIZE = int(os.getenv('DEEPSEEK_BASE_SIZE', 1024))
+IMAGE_SIZE = int(os.getenv('DEEPSEEK_IMAGE_SIZE', 640))
+CROP_MODE = os.getenv('DEEPSEEK_CROP_MODE', 'True').lower() in ('true', '1', 'yes')
 MIN_CROPS= 2
 MAX_CROPS= 6 # max:9; If your GPU memory is small, it is recommended to set it to 6.
 MAX_CONCURRENCY = 100 # If you have limited GPU memory, lower the concurrency count.
