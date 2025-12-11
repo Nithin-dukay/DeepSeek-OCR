@@ -11,7 +11,7 @@ from einops import rearrange, repeat
 from transformers import BatchFeature
 
 from vllm.config import VllmConfig
-from vllm.model_executor import SamplingMetadata
+from vllm.sequence import SamplingMetadata
 from vllm.model_executor.layers.quantization import QuantizationConfig
 from vllm.model_executor.model_loader.utils import set_default_torch_dtype
 from vllm.multimodal import MULTIMODAL_REGISTRY
@@ -36,6 +36,7 @@ from vllm.model_executor.models.interfaces import MultiModalEmbeddings, Supports
 from vllm.model_executor.models.utils import (AutoWeightsLoader, WeightsMapper, flatten_bn,
                     init_vllm_registered_model, maybe_prefix,
                     merge_multimodal_embeddings)
+from vllm.model_executor.models.registry import register_model
 
 from deepencoder.sam_vary_sdpa import build_sam_vit_b
 from deepencoder.clip_sdpa import build_clip_l
