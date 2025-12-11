@@ -1,0 +1,100 @@
+{
+  "industry_trends": {
+    "Agriculture, Forestry and Fishing": {
+      "first_period": 2011.06,
+      "last_period": 2025.06,
+      "first_value": 80078.0,
+      "last_value": 92128.0,
+      "absolute_change": 12050.0,
+      "percent_change": 15.047828367341843
+    },
+    "Electricity, Gas, Water and Waste Services": {
+      "first_period": 2011.06,
+      "last_period": 2025.06,
+      "first_value": 14486.0,
+      "last_value": 23678.0,
+      "absolute_change": 9192.0,
+      "percent_change": 63.45436973629711
+    },
+    "Manufacturing": {
+      "first_period": 2011.06,
+      "last_period": 2025.06,
+      "first_value": 206633.0,
+      "last_value": 222420.0,
+      "absolute_change": 15787.0,
+      "percent_change": 7.640115567213368
+    },
+    "Mining": {
+      "first_period": 2011.06,
+      "last_period": 2025.06,
+      "first_value": 5234.0,
+      "last_value": 6106.0,
+      "absolute_change": 872.0,
+      "percent_change": 16.660298051203668
+    }
+  },
+  "age_trends": {
+    "15-19": {
+      "first_value": 98572.0,
+      "last_value": 113927.0,
+      "percent_change": 15.577445927849693
+    },
+    "20-24": {
+      "first_value": 191834.0,
+      "last_value": 214165.0,
+      "percent_change": 11.640793602802422
+    },
+    "25-29": {
+      "first_value": 184750.0,
+      "last_value": 244477.0,
+      "percent_change": 32.32855209742896
+    },
+    "30-34": {
+      "first_value": 173195.0,
+      "last_value": 278578.0,
+      "percent_change": 60.846444758797894
+    },
+    "35-39": {
+      "first_value": 186714.0,
+      "last_value": 270882.0,
+      "percent_change": 45.078569362768725
+    },
+    "40-44": {
+      "first_value": 200611.0,
+      "last_value": 239524.0,
+      "percent_change": 19.397241427439173
+    },
+    "45-49": {
+      "first_value": 200716.0,
+      "last_value": 211645.0,
+      "percent_change": 5.445006875386118
+    },
+    "50-54": {
+      "first_value": 178833.0,
+      "last_value": 208581.0,
+      "percent_change": 16.634513764238143
+    },
+    "55-59": {
+      "first_value": 140309.0,
+      "last_value": 184468.0,
+      "percent_change": 31.472678160346096
+    },
+    "60-64": {
+      "first_value": 105985.0,
+      "last_value": 157693.0,
+      "percent_change": 48.788036042836254
+    },
+    "65 +": {
+      "first_value": 61853.0,
+      "last_value": 128988.0,
+      "percent_change": 108.53960195948457
+    }
+  },
+  "analysis_date": "2025-12-11T18:07:33.295074",
+  "key_insights": {
+    "total_industries": 4,
+    "total_age_groups": 11,
+    "data_span_years": 15,
+    "quarterly_data": true
+  }
+}

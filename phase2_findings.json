@@ -1,0 +1,142 @@
+{
+  "groups_breakdown": {
+    "Industry by employment variable": {
+      "total_records": 1330,
+      "unique_categories": 10,
+      "top_categories": {
+        "Agriculture, Forestry and Fishing": 171,
+        "Mining": 171,
+        "Manufacturing": 171,
+        "Education and Training": 135,
+        "Arts and Recreation Services": 135,
+        "Health Care and Social Assistance": 135,
+        "Other Services": 135,
+        "Total Industry": 135,
+        "Electricity, Gas, Water and Waste Services": 93,
+        "Public Administration and Safety": 49
+      }
+    },
+    "Sex by employment variable": {
+      "total_records": 228,
+      "unique_categories": 2,
+      "top_categories": {
+        "Male": 114,
+        "Female": 114
+      }
+    },
+    "Age by employment variable": {
+      "total_records": 1254,
+      "unique_categories": 11,
+      "top_categories": {
+        "15-19": 114,
+        "20-24": 114,
+        "25-29": 114,
+        "30-34": 114,
+        "35-39": 114,
+        "40-44": 114,
+        "45-49": 114,
+        "50-54": 114,
+        "55-59": 114,
+        "60-64": 114
+      }
+    },
+    "Region by employment variable": {
+      "total_records": 5808,
+      "unique_categories": 16,
+      "top_categories": {
+        "Northland": 363,
+        "Auckland": 363,
+        "Waikato": 363,
+        "Bay of Plenty": 363,
+        "Gisborne": 363,
+        "Hawke's Bay": 363,
+        "Taranaki": 363,
+        "Manawatu-Whanganui": 363,
+        "Wellington": 363,
+        "Tasman": 363
+      }
+    },
+    "Territorial authority by employment variable": {
+      "total_records": 11488,
+      "unique_categories": 68,
+      "top_categories": {
+        "Far North District": 171,
+        "Whangarei District": 171,
+        "Kaipara District": 171,
+        "Thames-Coromandel District": 171,
+        "Hauraki District": 171,
+        "Waikato District": 171,
+        "Matamata-Piako District": 171,
+        "Hamilton City": 171,
+        "Waipa District": 171,
+        "Otorohanga District": 171
+      }
+    }
+  },
+  "time_coverage": {
+    "years": [
+      2011,
+      2012,
+      2013,
+      2014,
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2020,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025
+    ],
+    "quarters": [
+      2,
+      5,
+      8,
+      11
+    ],
+    "total_periods": 57
+  },
+  "employment_variables": {
+    "Filled jobs": {
+      "total_records": 7903,
+      "non_null_values": 7902
+    },
+    "Total earnings": {
+      "total_records": 7445,
+      "non_null_values": 5757
+    },
+    "Filled jobs (workplace location based)": {
+      "total_records": 4760,
+      "non_null_values": 4731
+    }
+  },
+  "industries": [
+    "Agriculture, Forestry and Fishing",
+    "Arts and Recreation Services",
+    "Education and Training",
+    "Electricity, Gas, Water and Waste Services",
+    "Health Care and Social Assistance",
+    "Manufacturing",
+    "Mining",
+    "Other Services",
+    "Public Administration and Safety",
+    "Total Industry"
+  ],
+  "age_groups": [
+    "15-19",
+    "20-24",
+    "25-29",
+    "30-34",
+    "35-39",
+    "40-44",
+    "45-49",
+    "50-54",
+    "55-59",
+    "60-64",
+    "65 +"
+  ],
+  "regions_count": 16
+}

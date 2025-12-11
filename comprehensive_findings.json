@@ -1,0 +1,160 @@
+{
+  "dataset_summary": {
+    "total_records": 20108,
+    "date_range": "2011 Q2 to 2025 Q2",
+    "years_covered": 15,
+    "total_quarters": 57
+  },
+  "data_categories": {
+    "groups": [
+      "Industry by employment variable",
+      "Sex by employment variable",
+      "Age by employment variable",
+      "Region by employment variable",
+      "Territorial authority by employment variable"
+    ],
+    "employment_variables": [
+      "Filled jobs",
+      "Total earnings",
+      "Filled jobs (workplace location based)"
+    ],
+    "adjustment_types": [
+      "Actual",
+      "Seasonally adjusted",
+      "Trend"
+    ]
+  },
+  "regional_statistics": {
+    "Auckland": {
+      "first_value": 558596.0,
+      "last_value": 769959.0,
+      "percent_change": 37.83825877736325,
+      "avg_value": 682062.9649122807
+    },
+    "Bay of Plenty": {
+      "first_value": 105806.0,
+      "last_value": 143673.0,
+      "percent_change": 35.789085685121826,
+      "avg_value": 123074.57894736843
+    },
+    "Canterbury": {
+      "first_value": 228177.0,
+      "last_value": 302898.0,
+      "percent_change": 32.74694644946686,
+      "avg_value": 271490.15789473685
+    },
+    "Gisborne": {
+      "first_value": 17907.0,
+      "last_value": 21861.0,
+      "percent_change": 22.080750544479812,
+      "avg_value": 20125.315789473683
+    },
+    "Hawke's Bay": {
+      "first_value": 64550.0,
+      "last_value": 79104.0,
+      "percent_change": 22.546862896979086,
+      "avg_value": 71040.71929824562
+    },
+    "Manawatu-Whanganui": {
+      "first_value": 91872.0,
+      "last_value": 107443.0,
+      "percent_change": 16.948580633925463,
+      "avg_value": 100154.19298245614
+    },
+    "Marlborough": {
+      "first_value": 21533.0,
+      "last_value": 26786.0,
+      "percent_change": 24.395114475456275,
+      "avg_value": 24224.19298245614
+    },
+    "Nelson": {
+      "first_value": 24138.0,
+      "last_value": 19298.0,
+      "percent_change": -20.05137128179634,
+      "avg_value": 21141.105263157893
+    },
+    "Northland": {
+      "first_value": 50234.0,
+      "last_value": 71066.0,
+      "percent_change": 41.46992077079269,
+      "avg_value": 61770.929824561405
+    },
+    "Otago": {
+      "first_value": 86809.0,
+      "last_value": 112962.0,
+      "percent_change": 30.12706055823705,
+      "avg_value": 100499.17543859649
+    },
+    "Southland": {
+      "first_value": 41186.0,
+      "last_value": 46929.0,
+      "percent_change": 13.944058660709949,
+      "avg_value": 44560.912280701756
+    },
+    "Taranaki": {
+      "first_value": 44794.0,
+      "last_value": 52477.0,
+      "percent_change": 17.151850694289415,
+      "avg_value": 49097.54385964912
+    },
+    "Tasman": {
+      "first_value": 12572.0,
+      "last_value": 24624.0,
+      "percent_change": 95.86382437161947,
+      "avg_value": 19311.140350877195
+    },
+    "Waikato": {
+      "first_value": 159196.0,
+      "last_value": 219360.0,
+      "percent_change": 37.79240684439307,
+      "avg_value": 190376.19298245615
+    },
+    "Wellington": {
+      "first_value": 205232.0,
+      "last_value": 246835.0,
+      "percent_change": 20.271205270133315,
+      "avg_value": 228059.80701754385
+    },
+    "West Coast": {
+      "first_value": 13941.0,
+      "last_value": 14372.0,
+      "percent_change": 3.0916003156158096,
+      "avg_value": 14079.052631578947
+    }
+  },
+  "industry_growth_rankings": [
+    {
+      "industry": "Electricity, Gas, Water and Waste Services",
+      "growth_percent": 63.45436973629711,
+      "start_value": 14486.0,
+      "end_value": 23678.0
+    },
+    {
+      "industry": "Mining",
+      "growth_percent": 16.660298051203668,
+      "start_value": 5234.0,
+      "end_value": 6106.0
+    },
+    {
+      "industry": "Agriculture, Forestry and Fishing",
+      "growth_percent": 15.047828367341843,
+      "start_value": 80078.0,
+      "end_value": 92128.0
+    },
+    {
+      "industry": "Manufacturing",
+      "growth_percent": 7.640115567213368,
+      "start_value": 206633.0,
+      "end_value": 222420.0
+    }
+  ],
+  "data_quality": {
+    "completeness_pct": 91.45613686095086,
+    "suppressed_pct": 8.543863139049135,
+    "status_distribution": {
+      "F": 16317,
+      "R": 2855,
+      "C": 936
+    }
+  }
+}
