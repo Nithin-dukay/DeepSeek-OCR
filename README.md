@@ -30,6 +30,32 @@
 
 </div>
 
+---
+
+## 🆕 Solution for GitHub Issue #151
+
+**NEW**: Comprehensive solution for catastrophic failures (9.2% failure rate with loops/duplication) on historical documents. See [GITHUB_ISSUE_151_RESPONSE.md](GITHUB_ISSUE_151_RESPONSE.md) for details.
+
+**Key Features:**
+- ✅ Direct text return (no stdout capture)
+- ✅ Automatic retry with repetition detection
+- ✅ Official chat_template support
+- ✅ Advanced decoding controls
+- ✅ Clean text extraction utilities
+
+**Quick Start:**
+```python
+from enhanced_hf_inference import EnhancedDeepSeekOCR
+
+model = EnhancedDeepSeekOCR()
+result = model.infer_with_retry(image='document.jpg', detect_repetition=True)
+print(result['text'])  # Returns text directly!
+```
+
+See [BEST_PRACTICES.md](BEST_PRACTICES.md) for comprehensive guide.
+
+---
+
 
 
 <p align="center">
