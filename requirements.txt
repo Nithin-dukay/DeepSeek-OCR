@@ -1,4 +1,7 @@
-transformers==4.46.3
+# Note: transformers 4.46+ removed LlamaFlashAttention2 class
+# For compatibility, use 4.45.2 OR use attn_implementation="eager" when loading models
+# See TROUBLESHOOTING.md for more details
+transformers==4.45.2
 tokenizers==0.20.3
 PyMuPDF
 img2pdf

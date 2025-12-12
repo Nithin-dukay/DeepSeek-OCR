@@ -66,6 +66,11 @@
 
 ## Install
 >Our environment is cuda11.8+torch2.6.0.
+
+### ⚠️ Important Compatibility Note
+
+**Issue #302 Fix**: The project now uses `transformers==4.45.2` to avoid the `LlamaFlashAttention2` import error. If you encounter import issues, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for solutions.
+
 1. Clone this repository and navigate to the DeepSeek-OCR folder
 ```bash
 git clone https://github.com/deepseek-ai/DeepSeek-OCR.git
@@ -85,6 +90,8 @@ pip install -r requirements.txt
 pip install flash-attn==2.7.3 --no-build-isolation
 ```
 **Note:** if you want vLLM and transformers codes to run in the same environment, you don't need to worry about this installation error like: vllm 0.8.5+cu118 requires transformers>=4.51.1
+
+**Troubleshooting**: If you encounter `ImportError: cannot import name 'LlamaFlashAttention2'`, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 
 ## vLLM-Inference
 - VLLM:
@@ -171,7 +178,9 @@ os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 model_name = 'deepseek-ai/DeepSeek-OCR'
 
 tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-model = AutoModel.from_pretrained(model_name, _attn_implementation='flash_attention_2', trust_remote_code=True, use_safetensors=True)
+# Note: Using 'eager' attention to avoid LlamaFlashAttention2 import error
+# For flash_attention_2, ensure transformers==4.45.2 is installed
+model = AutoModel.from_pretrained(model_name, attn_implementation='eager', trust_remote_code=True, use_safetensors=True)
 model = model.eval().cuda().to(torch.bfloat16)
 
 # prompt = "<image>\nFree OCR. "

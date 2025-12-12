@@ -10,7 +10,10 @@ model_name = 'deepseek-ai/DeepSeek-OCR'
 
 
 tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-model = AutoModel.from_pretrained(model_name, _attn_implementation='flash_attention_2', trust_remote_code=True, use_safetensors=True)
+# Note: Using 'eager' attention to avoid LlamaFlashAttention2 import error
+# For flash_attention_2, ensure transformers==4.45.2 or earlier is installed
+# See TROUBLESHOOTING.md for more details
+model = AutoModel.from_pretrained(model_name, attn_implementation='eager', trust_remote_code=True, use_safetensors=True)
 model = model.eval().cuda().to(torch.bfloat16)
 
 
